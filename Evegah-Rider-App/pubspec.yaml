@@ -30,6 +30,7 @@ dependencies:
 
   # BLUETOOTH
   flutter_blue_plus: ^1.32.8
+  permission_handler: ^11.3.1
 
   # URL LAUNCHER
   url_launcher: ^6.3.0

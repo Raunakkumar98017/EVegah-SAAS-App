@@ -2,7 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 
-import 'create_profile_screen.dart';
+import 'vehicle_animated_screen.dart';
 
 class SuccessScreen extends StatefulWidget {
   const SuccessScreen({super.key});
@@ -16,10 +16,10 @@ class _SuccessScreenState extends State<SuccessScreen> {
   void initState() {
     super.initState();
 
-    Timer(const Duration(seconds: 3), () {
+    Timer(const Duration(seconds: 1), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const CreateProfileScreen()),
+        MaterialPageRoute(builder: (context) => const VehicleAnimatedScreen()),
       );
     });
   }

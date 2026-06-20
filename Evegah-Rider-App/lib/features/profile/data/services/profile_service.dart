@@ -8,9 +8,10 @@ class ProfileService {
   ProfileService._internal();
 
   // --- USER DATA (The "Database") ---
-  String userName = "Raunak Kumar";
-  String phoneNumber = "+91 98765 43210";
-  String kycStatus = "Pending"; // Can be: Pending, Under Review, Approved
+  String userName = "Adeola Oladimeji";
+  String phoneNumber = "+234 706 123 4567";
+  String email = "adeola.oladimeji@email.com";
+  String kycStatus = "Approved"; // Can be: Pending, Under Review, Approved
   
   // --- METHODS (The "Actions") ---
   

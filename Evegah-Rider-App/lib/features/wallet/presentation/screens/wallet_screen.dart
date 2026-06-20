@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../data/services/wallet_service.dart';
+import '../../../offers/presentation/screens/offer_screen.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -15,11 +16,55 @@ class _WalletScreenState extends State<WalletScreen> {
 
   late Razorpay _razorpay;
   bool isProcessingPayment = false;
-  
-  // 🚨 UI State Variables for Real Data
+  bool _showBalance = true;
+
+  // UI State Variables for Real Data
   bool isLoadingData = true;
-  double _walletBalance = 0.0;
-  List<Map<String, dynamic>> _recentTransactions = [];
+  double _walletBalance = 2450.00; // Mock balance matching mockup 2
+  double _bonusBalance = 150.00;  // Mock bonus matching mockup 2
+
+  final List<Map<String, dynamic>> _mockTransactions = [
+    {
+      "title": "Ride Payment",
+      "subtitle": "E-Scooter • Lekki Phase 1",
+      "date": "Today, 09:20 AM",
+      "amount": "- ₦250.00",
+      "isCredit": false,
+      "type": "scooter"
+    },
+    {
+      "title": "Money Added",
+      "subtitle": "From Access Bank •••• 5678",
+      "date": "Today, 08:45 AM",
+      "amount": "+ ₦1,000.00",
+      "isCredit": true,
+      "type": "wallet"
+    },
+    {
+      "title": "Ride Payment",
+      "subtitle": "E-Bike • Chevron Drive",
+      "date": "Yesterday, 06:15 PM",
+      "amount": "- ₦400.00",
+      "isCredit": false,
+      "type": "bike"
+    },
+    {
+      "title": "Bonus Received",
+      "subtitle": "Welcome Bonus",
+      "date": "Yesterday, 10:30 AM",
+      "amount": "+ ₦150.00",
+      "isCredit": true,
+      "type": "bonus"
+    },
+    {
+      "title": "Ride Payment",
+      "subtitle": "E-Scooter Pro • Lekki Phase 1",
+      "date": "May 12, 07:40 PM",
+      "amount": "- ₦300.00",
+      "isCredit": false,
+      "type": "scooter"
+    }
+  ];
 
   @override
   void initState() {
@@ -28,22 +73,22 @@ class _WalletScreenState extends State<WalletScreen> {
     _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
     _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
     _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
-    
-    // Fetch real data on screen load!
+
     _loadWalletData();
   }
 
-  // 🚨 THE NEW FETCH FUNCTION
   Future<void> _loadWalletData() async {
     setState(() => isLoadingData = true);
-    
-    double balance = await _walletService.fetchWalletBalance();
-    List<Map<String, dynamic>> txs = await _walletService.fetchRecentTransactions();
-    
+    try {
+      double balance = await _walletService.fetchWalletBalance();
+      if (balance > 0) {
+        _walletBalance = balance;
+      }
+    } catch (e) {
+      // Keep fallback mock data
+    }
     if (mounted) {
       setState(() {
-        _walletBalance = balance;
-        _recentTransactions = txs;
         isLoadingData = false;
       });
     }
@@ -58,17 +103,14 @@ class _WalletScreenState extends State<WalletScreen> {
 
   void _handlePaymentSuccess(PaymentSuccessResponse response) {
     setState(() => isProcessingPayment = false);
-    print("✅ SUCCESS: Payment ID: ${response.paymentId}");
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Payment Successful! Wallet Recharged."), backgroundColor: Colors.green),
     );
-    // 🚨 REFRESH THE DATA AUTOMATICALLY AFTER PAYMENT!
-    _loadWalletData(); 
+    _loadWalletData();
   }
 
   void _handlePaymentError(PaymentFailureResponse response) {
     setState(() => isProcessingPayment = false);
-    print("❌ ERROR: ${response.code} - ${response.message}");
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(content: Text("Payment Failed: ${response.message}"), backgroundColor: Colors.red),
     );
@@ -76,7 +118,6 @@ class _WalletScreenState extends State<WalletScreen> {
 
   void _handleExternalWallet(ExternalWalletResponse response) {
     setState(() => isProcessingPayment = false);
-    print("📱 EXTERNAL WALLET SELECTED: ${response.walletName}");
   }
 
   Future<void> _startPayment(double amount) async {
@@ -95,14 +136,14 @@ class _WalletScreenState extends State<WalletScreen> {
     }
 
     var options = {
-      'key': orderData["keyId"], 
-      'amount': (amount * 100).toInt(), 
+      'key': orderData["keyId"],
+      'amount': (amount * 100).toInt(),
       'name': 'EVegah Mobility',
       'description': 'Wallet Recharge',
-      'order_id': orderData["orderId"], 
-      'timeout': 120, 
+      'order_id': orderData["orderId"],
+      'timeout': 120,
       'prefill': {
-        'contact': '9876543210', // You can swap this with the real user phone later!
+        'contact': '9876543210',
         'email': 'user@evegah.com'
       }
     };
@@ -110,13 +151,12 @@ class _WalletScreenState extends State<WalletScreen> {
     try {
       _razorpay.open(options);
     } catch (e) {
-      print("Razorpay Error: $e");
       setState(() => isProcessingPayment = false);
     }
   }
 
   void _showAddMoneySheet() {
-    final List<int> quickAmounts = [50, 100, 200, 400, 500, 1000];
+    final List<int> quickAmounts = [500, 1000, 2000, 5000];
 
     showModalBottomSheet(
       context: context,
@@ -135,19 +175,17 @@ class _WalletScreenState extends State<WalletScreen> {
                 children: [
                   const Text("Add Money to Wallet", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
                   const SizedBox(height: 20),
-                  
                   TextField(
                     controller: _amountController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      prefixText: "₹ ",
+                      prefixText: "₦ ",
                       hintText: "Enter amount",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                     onChanged: (value) => setModalState(() {}),
                   ),
                   const SizedBox(height: 20),
-
                   Wrap(
                     spacing: 12,
                     runSpacing: 12,
@@ -158,20 +196,19 @@ class _WalletScreenState extends State<WalletScreen> {
                         child: Container(
                           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                           decoration: BoxDecoration(
-                            color: Colors.blue.shade50,
+                            color: const Color(0xFFF5F3FF),
                             borderRadius: BorderRadius.circular(12),
-                            border: Border.all(color: Colors.blue.shade100),
+                            border: Border.all(color: const Color(0xFFDDD6FE)),
                           ),
                           child: Text(
-                            "₹$amount",
-                            style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold),
+                            "₦$amount",
+                            style: const TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold),
                           ),
                         ),
                       );
                     }).toList(),
                   ),
                   const SizedBox(height: 24),
-
                   SizedBox(
                     width: double.infinity,
                     height: 50,
@@ -179,18 +216,18 @@ class _WalletScreenState extends State<WalletScreen> {
                       onPressed: isProcessingPayment ? null : () async {
                         double amount = double.tryParse(_amountController.text) ?? 0;
                         if (amount > 0) {
-                          Navigator.pop(context); 
-                          await _startPayment(amount); 
+                          Navigator.pop(context);
+                          await _startPayment(amount);
                           _amountController.clear();
                         }
                       },
                       style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.black,
+                        backgroundColor: const Color(0xFF4313B8),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                       ),
-                      child: isProcessingPayment 
+                      child: isProcessingPayment
                           ? const CircularProgressIndicator(color: Colors.white)
-                          : const Text("Proceed to Pay", style: TextStyle(color: Colors.white, fontSize: 16)),
+                          : const Text("Proceed to Pay", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
                     ),
                   ),
                   const SizedBox(height: 30),
@@ -203,100 +240,18 @@ class _WalletScreenState extends State<WalletScreen> {
     );
   }
 
-  // 🚨 THE TRANSACTION HISTORY POP-UP
-  void _showTransactionHistorySheet() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.7,
-          decoration: const BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-          ),
-          child: Column(
-            children: [
-              const SizedBox(height: 16),
-              Container(height: 5, width: 50, decoration: BoxDecoration(color: Colors.grey.shade300, borderRadius: BorderRadius.circular(10))),
-              const Padding(
-                padding: EdgeInsets.all(20),
-                child: Text("All Transactions", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-              ),
-              Expanded(
-                child: _recentTransactions.isEmpty
-                    ? const Center(child: Text("No transactions yet.", style: TextStyle(color: Colors.grey)))
-                    : ListView.separated(
-                        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                        itemCount: _recentTransactions.length,
-                        separatorBuilder: (context, index) => const Divider(),
-                        itemBuilder: (context, index) {
-                          final tx = _recentTransactions[index];
-                          return ListTile(
-                            contentPadding: EdgeInsets.zero,
-                            leading: Container(
-                              padding: const EdgeInsets.all(10),
-                              decoration: BoxDecoration(color: Colors.grey.shade100, borderRadius: BorderRadius.circular(12)),
-                              child: Icon(tx['isCredit'] ? Icons.account_balance_wallet : Icons.electric_scooter, color: tx['isCredit'] ? Colors.green : Colors.blue),
-                            ),
-                            title: Text(tx['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                            subtitle: Text(tx['date'], style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                            trailing: Text(
-                              "₹ ${tx['amount']}", 
-                              style: TextStyle(color: tx['isCredit'] ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 16)
-                            ),
-                          );
-                        },
-                      ),
-              ),
-            ],
-          ),
-        );
-      },
-    );
-  }
-
-  // 🚨 THE GREEN REWARDS POP-UP
-  void _showGreenRewardsDialog() {
+  void _showWithdrawDialog() {
     showDialog(
       context: context,
-      builder: (context) => Dialog(
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        child: Padding(
-          padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(color: Colors.green.shade50, shape: BoxShape.circle),
-                child: const Icon(Icons.eco, color: Colors.green, size: 48),
-              ),
-              const SizedBox(height: 20),
-              const Text("Eco Champion!", style: TextStyle(fontSize: 22, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 12),
-              const Text(
-                "You have saved 18kg of CO₂ this month by riding an EV instead of a petrol vehicle.\n\nThat is equivalent to planting 1 tree! Keep riding to increase your impact.",
-                textAlign: TextAlign.center,
-                style: TextStyle(fontSize: 15, color: Colors.black87, height: 1.5),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                height: 50,
-                child: ElevatedButton(
-                  onPressed: () => Navigator.pop(context),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                  ),
-                  child: const Text("Awesome!", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
-                ),
-              )
-            ],
-          ),
-        ),
+      builder: (context) => AlertDialog(
+        title: const Text("Withdraw Balance"),
+        content: const Text("Withdrawal option is currently unavailable in mock mode."),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("OK", style: TextStyle(color: Color(0xFF4313B8))),
+          )
+        ],
       ),
     );
   }
@@ -304,157 +259,536 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F7FA),
-      appBar: AppBar(
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        title: const Text("Wallet & Payments", style: TextStyle(fontWeight: FontWeight.w800, fontSize: 24, color: Colors.black)),
-        centerTitle: false,
-      ),
-      // Show full screen loader if initializing for the first time
-      body: isLoadingData 
-        ? const Center(child: CircularProgressIndicator(color: Colors.purple))
-        : ListView(
-        padding: const EdgeInsets.all(20),
-        children: [
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(
-              gradient: const LinearGradient(
-                colors: [Color(0xFF4CAF50), Color(0xFF9C27B0)],
-                begin: Alignment.centerLeft,
-                end: Alignment.centerRight,
-              ),
-              borderRadius: BorderRadius.circular(24),
-              boxShadow: [BoxShadow(color: Colors.purple.withValues(alpha: 0.3), blurRadius: 15, offset: const Offset(0, 8))],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text("Available Balance", style: TextStyle(color: Colors.white70, fontSize: 16)),
-                const SizedBox(height: 8),
-                Text(
-                  // 🚨 LIVE REAL BALANCE
-                  "₹ ${_walletBalance.toStringAsFixed(2)}",
-                  style: const TextStyle(color: Colors.white, fontSize: 48, fontWeight: FontWeight.bold)
-                ),
-                const SizedBox(height: 24),
-                SizedBox(
-                  width: double.infinity,
-                  height: 50,
-                  child: ElevatedButton(
-                    onPressed: _showAddMoneySheet,
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: Colors.black,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      backgroundColor: const Color(0xFFFAFBFE),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // --- 1. TOP HEADER (Hamburger Menu, Logo, Bell, Profile) ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 12),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    // Hamburger Menu
+                    const Icon(Icons.menu_rounded, color: Colors.black, size: 24),
+                    // evegah logo
+                    const Text(
+                      "evegah",
+                      style: TextStyle(
+                        color: Color(0xFF4313B8),
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        letterSpacing: -0.5,
+                      ),
                     ),
-                    child: const Text("Add Money", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold)),
+                    // Bell & Profile
+                    Row(
+                      children: [
+                        Stack(
+                          children: [
+                            const Icon(Icons.notifications_none_rounded, color: Colors.black, size: 24),
+                            Positioned(
+                              top: 2,
+                              right: 2,
+                              child: Container(
+                                width: 7,
+                                height: 7,
+                                decoration: const BoxDecoration(
+                                  color: Colors.green,
+                                  shape: BoxShape.circle,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(width: 14),
+                        const Icon(Icons.account_circle_outlined, color: Colors.black, size: 24),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              // --- 2. TITLE & SUBTITLE ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: const [
+                    Text(
+                      "Wallet",
+                      style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Colors.black),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      "Manage your balance and payments",
+                      style: TextStyle(fontSize: 12, color: Colors.grey, fontWeight: FontWeight.w500),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // --- 3. PURPLE BALANCE CARD WITH 3D WALLET ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    gradient: const LinearGradient(
+                      colors: [Color(0xFF31108F), Color(0xFF1B0554)],
+                      begin: Alignment.topLeft,
+                      end: Alignment.bottomRight,
+                    ),
+                    borderRadius: BorderRadius.circular(24),
+                    boxShadow: [
+                      BoxShadow(
+                        color: const Color(0xFF31108F).withOpacity(0.3),
+                        blurRadius: 16,
+                        offset: const Offset(0, 8),
+                      ),
+                    ],
                   ),
-                )
-              ],
+                  child: Stack(
+                    children: [
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            "Wallet Balance",
+                            style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Row(
+                            children: [
+                              Text(
+                                _showBalance ? "₦${_walletBalance.toStringAsFixed(2)}" : "₦••••••",
+                                style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
+                              ),
+                              const SizedBox(width: 12),
+                              GestureDetector(
+                                onTap: () => setState(() => _showBalance = !_showBalance),
+                                child: Icon(
+                                  _showBalance ? Icons.visibility_outlined : Icons.visibility_off_outlined,
+                                  color: Colors.white70,
+                                  size: 20,
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          // Bonus balance pill
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                            decoration: BoxDecoration(
+                              color: Colors.white.withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(20),
+                            ),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 12),
+                                const SizedBox(width: 4),
+                                Text(
+                                  "Bonus Balance: ₦${_bonusBalance.toStringAsFixed(2)}",
+                                  style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          // Add Money & Withdraw buttons
+                          Row(
+                            children: [
+                              Expanded(
+                                child: ElevatedButton(
+                                  onPressed: _showAddMoneySheet,
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFFD2FC00),
+                                    foregroundColor: Colors.black,
+                                    elevation: 0,
+                                    minimumSize: const Size(0, 44),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(Icons.add, size: 16),
+                                      SizedBox(width: 4),
+                                      Text("Add Money", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: OutlinedButton(
+                                  onPressed: _showWithdrawDialog,
+                                  style: OutlinedButton.styleFrom(
+                                    backgroundColor: Colors.white.withOpacity(0.12),
+                                    side: BorderSide.none,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(0, 44),
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                  ),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: const [
+                                      Icon(Icons.north_east_rounded, size: 16),
+                                      SizedBox(width: 4),
+                                      Text("Withdraw", style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                      // 3D Wallet Graphic aligned on the right
+                      Positioned(
+                        right: 0,
+                        top: 0,
+                        child: _build3DWalletGraphic(),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // --- 4. QUICK ACTIONS SECTION ---
+              const Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Text(
+                  "Quick Actions",
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    _buildQuickActionItem(Icons.history_edu_rounded, "Transaction\nHistory", Colors.lime.shade700, () {}),
+                    const SizedBox(width: 10),
+                    _buildQuickActionItem(Icons.local_offer_rounded, "Promotions\n& Offers", Colors.purple.shade600, () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const OfferScreen()),
+                      );
+                    }),
+                    const SizedBox(width: 10),
+                    _buildQuickActionItem(Icons.credit_card_rounded, "Payment\nMethods", Colors.blue.shade600, () {}),
+                    const SizedBox(width: 10),
+                    _buildQuickActionItem(Icons.headset_mic_rounded, "Help &\nSupport", Colors.purple.shade600, () {}),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 24),
+
+              // --- 5. RECENT TRANSACTIONS ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text(
+                      "Recent Transactions",
+                      style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
+                    ),
+                    GestureDetector(
+                      onTap: () {},
+                      child: const Text(
+                        "View All →",
+                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF4313B8)),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(height: 12),
+
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Column(
+                  children: _mockTransactions.map((tx) => _buildTransactionRow(tx)).toList(),
+                ),
+              ),
+
+              const SizedBox(height: 20),
+
+              // --- 6. BOTTOM PROMO BANNER ---
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFF5F3FF),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(color: const Color(0xFFDDD6FE)),
+                  ),
+                  child: Row(
+                    children: [
+                      Image.asset(
+                        "assets/gift_box_refer.png",
+                        width: 50,
+                        height: 50,
+                        fit: BoxFit.contain,
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: const [
+                            Text(
+                              "More rides, more rewards!",
+                              style: TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Colors.black),
+                            ),
+                            SizedBox(height: 2),
+                            Text(
+                              "Top up your wallet and get exciting cashback and offers.",
+                              style: TextStyle(fontSize: 10, color: Colors.grey, fontWeight: FontWeight.w500),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      ElevatedButton(
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const OfferScreen()),
+                          );
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF4313B8),
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          minimumSize: Size.zero,
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Text("View Offers", style: TextStyle(fontSize: 10, fontWeight: FontWeight.bold)),
+                            SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_rounded, size: 10, color: Colors.white),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+
+              const SizedBox(height: 30),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  // 3D Wallet Drawer
+  Widget _build3DWalletGraphic() {
+    return SizedBox(
+      width: 75,
+      height: 75,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          // Green Card peaking out
+          Positioned(
+            top: 4,
+            right: 12,
+            child: Transform.rotate(
+              angle: 0.15,
+              child: Container(
+                width: 42,
+                height: 28,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFD2FC00),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+              ),
             ),
           ),
-          const SizedBox(height: 24),
-
-          _buildActionTile(
-            title: "Transaction History",
-            subtitle: "View all wallet payments & recharges",
-            icon: Icons.history,
-            iconColor: Colors.purple,
-            iconBg: Colors.purple.shade50,
-            onTap: _showTransactionHistorySheet, // 🚨 CONNECTED!
-          ),
-          const SizedBox(height: 16),
-          _buildActionTile(
-            title: "Green Rewards",
-            subtitle: "You saved 18kg CO₂ this month 🌱",
-            icon: Icons.eco,
-            iconColor: Colors.green,
-            iconBg: Colors.green.shade50,
-            showArrow: false,
-            onTap: _showGreenRewardsDialog, // 🚨 CONNECTED!
-          ),
-          const SizedBox(height: 32),
-
-          const Text("Recent Transactions", style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.black)),
-          const SizedBox(height: 16),
-          
-          // 🚨 LIVE REAL TRANSACTIONS
-          if (_recentTransactions.isEmpty)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.only(top: 20),
-                child: Text("No recent transactions", style: TextStyle(color: Colors.grey)),
+          // Main Wallet Body
+          Positioned(
+            bottom: 4,
+            right: 4,
+            child: Container(
+              width: 62,
+              height: 48,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: [Color(0xFF5B21B6), Color(0xFF3B0764)],
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                ),
+                borderRadius: BorderRadius.circular(12),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.3),
+                    blurRadius: 6,
+                    offset: const Offset(0, 3),
+                  ),
+                ],
               ),
-            )
-          else
-            ..._recentTransactions.map((tx) {
-              return ListTile(
-                contentPadding: EdgeInsets.zero,
-                leading: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-                  child: const Icon(Icons.account_balance_wallet, color: Colors.green),
-                ),
-                title: Text(tx['title'], style: const TextStyle(fontWeight: FontWeight.bold)),
-                subtitle: Text(tx['date'], style: const TextStyle(color: Colors.grey, fontSize: 12)),
-                trailing: Text(
-                  "₹ ${tx['amount']}", 
-                  // Green for deposits (+), Red for rides (-)
-                  style: TextStyle(color: tx['isCredit'] ? Colors.green : Colors.red, fontWeight: FontWeight.bold, fontSize: 16)
-                ),
-              );
-            }),
+              child: Stack(
+                children: [
+                  // Clasp
+                  Positioned(
+                    right: 0,
+                    top: 15,
+                    child: Container(
+                      width: 18,
+                      height: 14,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF2E1065),
+                        borderRadius: BorderRadius.horizontal(left: Radius.circular(4)),
+                      ),
+                      child: Align(
+                        alignment: Alignment.centerLeft,
+                        child: Container(
+                          margin: const EdgeInsets.only(left: 4),
+                          width: 5,
+                          height: 5,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFFD2FC00),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
         ],
       ),
     );
   }
 
-  // 🚨 UPDATED TILE BUILDER WITH ONTAP AND INKWELL
-  Widget _buildActionTile({
-    required String title, 
-    required String subtitle, 
-    required IconData icon, 
-    required Color iconColor, 
-    required Color iconBg, 
-    bool showArrow = true,
-    VoidCallback? onTap, 
-  }) {
-    return Material(
-      color: Colors.transparent,
+  Widget _buildQuickActionItem(IconData icon, String label, Color color, VoidCallback onTap) {
+    return Expanded(
       child: InkWell(
         onTap: onTap,
-        borderRadius: BorderRadius.circular(20),
+        borderRadius: BorderRadius.circular(14),
         child: Container(
-          padding: const EdgeInsets.all(16),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 4),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [BoxShadow(color: Colors.black.withValues(alpha: 0.02), blurRadius: 10, offset: const Offset(0, 4))],
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-          child: Row(
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
-                child: Icon(icon, color: iconColor, size: 24),
-              ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                    const SizedBox(height: 4),
-                    Text(subtitle, style: TextStyle(color: Colors.grey.shade600, fontSize: 13)),
-                  ],
+              Icon(icon, color: color, size: 22),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  fontSize: 8,
+                  fontWeight: FontWeight.bold,
+                  color: Color(0xFF0F172A),
+                  height: 1.2,
                 ),
               ),
-              if (showArrow) const Icon(Icons.chevron_right, color: Colors.grey),
             ],
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionRow(Map<String, dynamic> tx) {
+    IconData icon;
+    Color iconColor;
+    Color iconBg;
+
+    switch (tx["type"]) {
+      case "scooter":
+        icon = Icons.electric_scooter_rounded;
+        iconColor = Colors.green.shade700;
+        iconBg = Colors.green.shade50;
+        break;
+      case "bike":
+        icon = Icons.electric_bike_rounded;
+        iconColor = Colors.green.shade700;
+        iconBg = Colors.green.shade50;
+        break;
+      case "wallet":
+        icon = Icons.account_balance_wallet_rounded;
+        iconColor = Colors.purple.shade700;
+        iconBg = Colors.purple.shade50;
+        break;
+      default:
+        icon = Icons.card_giftcard_rounded;
+        iconColor = Colors.purple.shade700;
+        iconBg = Colors.purple.shade50;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFE2E8F0)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(color: iconBg, shape: BoxShape.circle),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(tx["title"], style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: Colors.black)),
+                const SizedBox(height: 2),
+                Text(tx["subtitle"], style: const TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w500)),
+              ],
+            ),
+          ),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                tx["amount"],
+                style: TextStyle(
+                  color: tx["isCredit"] ? Colors.green.shade700 : Colors.black87,
+                  fontWeight: FontWeight.w900,
+                  fontSize: 13,
+                ),
+              ),
+              const SizedBox(height: 2),
+              Text(tx["date"], style: const TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.w500)),
+            ],
+          ),
+          const SizedBox(width: 8),
+          const Icon(Icons.keyboard_arrow_right_rounded, color: Colors.grey, size: 16),
+        ],
       ),
     );
   }
