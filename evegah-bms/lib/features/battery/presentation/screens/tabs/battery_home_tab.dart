@@ -166,7 +166,10 @@ class BatteryHomeTab extends ConsumerWidget {
                 ),
               const SizedBox(height: 14),
 
-              // KPI Stats Grid
+              // =========================================================
+              // COMMENTED OUT: KPI STATS GRID
+              // =========================================================
+              /*
               _buildKpiGrid(
                 connectedCount,
                 availableCount,
@@ -175,21 +178,28 @@ class BatteryHomeTab extends ConsumerWidget {
                 screenWidth,
               ),
               const SizedBox(height: 14),
+              */
 
-              // Average State of Charge & Recent Activity Layout
+              // =========================================================
+              // COMMENTED OUT: AVERAGE STATE OF CHARGE (Keeping Recent Activity)
+              // =========================================================
               if (isMobile) ...[
+                /*
                 _buildAverageSocCard(avgSoc, connectedList),
                 const SizedBox(height: 14),
+                */
                 _buildRecentActivityCard(batteryState.recentActivity),
               ] else
                 Row(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    /*
                     Expanded(
                       flex: 11,
                       child: _buildAverageSocCard(avgSoc, connectedList),
                     ),
                     const SizedBox(width: 12),
+                    */
                     Expanded(
                       flex: 12,
                       child: _buildRecentActivityCard(
@@ -200,9 +210,13 @@ class BatteryHomeTab extends ConsumerWidget {
                 ),
               const SizedBox(height: 14),
 
-              // Quick Actions Layout
+              // =========================================================
+              // COMMENTED OUT: QUICK ACTIONS LAYOUT
+              // =========================================================
+              /*
               _buildQuickActionsCard(screenWidth, ref),
               const SizedBox(height: 16),
+              */
             ],
           ),
         ),
@@ -372,6 +386,7 @@ class BatteryHomeTab extends ConsumerWidget {
     );
   }
 
+  // NOTE: Still keeping the method definitions in the file so they don't break if you uncomment them later.
   Widget _buildKpiGrid(int connected, int available, int low, int faults, double screenWidth) {
     final bool isSmall = screenWidth < 450;
 
@@ -453,7 +468,7 @@ class BatteryHomeTab extends ConsumerWidget {
           Container(
             height: 3,
             width: double.infinity,
-            color: color, // Matching highlight underline bar
+            color: color, 
           ),
         ],
       ),
@@ -516,7 +531,7 @@ class BatteryHomeTab extends ConsumerWidget {
                       strokeWidth: 10,
                       backgroundColor: const Color(0xFFF1F5F9),
                       valueColor: const AlwaysStoppedAnimation<Color>(
-                        Color(0xFFCCFF00), // Neon Lime Green
+                        Color(0xFFCCFF00), 
                       ),
                     ),
                   ),
@@ -706,11 +721,13 @@ class BatteryHomeTab extends ConsumerWidget {
     );
   }
 
+  // =========================================================
+  // UPDATED: Active Connections Card (Dynamic Height & Up to 10)
+  // =========================================================
   Widget _buildActiveConnectionsCard(List<BatteryModel> batteries) {
-    final displayList = batteries.take(3).toList();
+    final displayList = batteries.take(10).toList();
 
     return Container(
-      height: 160,
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(20),
@@ -726,6 +743,7 @@ class BatteryHomeTab extends ConsumerWidget {
       padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min, // Hugs the contents tightly
         children: [
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -752,66 +770,70 @@ class BatteryHomeTab extends ConsumerWidget {
             ],
           ),
           const SizedBox(height: 10),
-          Expanded(
-            child: displayList.isEmpty
-                ? const Center(
+          
+          // Render safe empty state OR list view safely
+          displayList.isEmpty
+              ? const SizedBox(
+                  height: 80,
+                  child: Center(
                     child: Text(
                       'No connected BMS',
                       style: TextStyle(color: Color(0xFF8C93A8), fontSize: 11),
                     ),
-                  )
-                : ListView.builder(
-                    physics: const NeverScrollableScrollPhysics(),
-                    itemCount: displayList.length,
-                    itemBuilder: (context, index) {
-                      final b = displayList[index];
-                      Color socColor = const Color(0xFF22C55E);
-                      if (b.soc < 30) {
-                        socColor = const Color(0xFFEF4444);
-                      } else if (b.soc < 75) {
-                        socColor = const Color(0xFFF59E0B);
-                      }
-                      return GestureDetector(
-                        behavior: HitTestBehavior.opaque,
-                        onTap: () {
-                          showDialog(
-                            context: context,
-                            builder: (context) => BatteryDetailsDialog(battery: b),
-                          );
-                        },
-                        child: Padding(
-                          padding: const EdgeInsets.only(bottom: 8.0),
-                          child: Row(
-                            children: [
-                              Icon(Icons.battery_std_rounded, color: socColor, size: 16),
-                              const SizedBox(width: 8),
-                              Container(
-                                width: 5,
-                                height: 5,
-                                decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
-                              ),
-                              const SizedBox(width: 6),
-                              Text(
-                                b.name,
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
-                              ),
-                              const Spacer(),
-                              Text(
-                                '${b.soc.toInt()}%',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
-                              ),
-                              const SizedBox(width: 12),
-                              Text(
-                                '${b.temperature.toInt()}°C',
-                                style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8C93A8)),
-                              ),
-                            ],
-                          ),
-                        ),
-                      );
-                    },
                   ),
-          ),
+                )
+              : ListView.builder(
+                  shrinkWrap: true, // Prevents layout explosion
+                  physics: const NeverScrollableScrollPhysics(), // Ensures page scrolls instead
+                  itemCount: displayList.length,
+                  itemBuilder: (context, index) {
+                    final b = displayList[index];
+                    Color socColor = const Color(0xFF22C55E);
+                    if (b.soc < 30) {
+                      socColor = const Color(0xFFEF4444);
+                    } else if (b.soc < 75) {
+                      socColor = const Color(0xFFF59E0B);
+                    }
+                    return GestureDetector(
+                      behavior: HitTestBehavior.opaque,
+                      onTap: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => BatteryDetailsDialog(battery: b),
+                        );
+                      },
+                      child: Padding(
+                        padding: const EdgeInsets.only(bottom: 8.0),
+                        child: Row(
+                          children: [
+                            Icon(Icons.battery_std_rounded, color: socColor, size: 16),
+                            const SizedBox(width: 8),
+                            Container(
+                              width: 5,
+                              height: 5,
+                              decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              b.name,
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
+                            ),
+                            const Spacer(),
+                            Text(
+                              '${b.soc.toInt()}%',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
+                            ),
+                            const SizedBox(width: 12),
+                            Text(
+                              '${b.temperature.toInt()}°C',
+                              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF8C93A8)),
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                ),
         ],
       ),
     );

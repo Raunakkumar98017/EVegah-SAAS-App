@@ -17,7 +17,7 @@ class _BatteryMonitoringTabState extends ConsumerState<BatteryMonitoringTab> {
   String? _selectedBatteryId;
   int _selectedSubTabIndex = 0; // 0: Live Data, 1: Alerts, 2: History, 3: Settings
   String _selectedVoltageMode = 'Total'; // Dropdown inside Voltage card
-
+/*
   // Default Mock Battery matching mockup screenshot
   static final BatteryModel _mockBattery = BatteryModel(
     id: 'mock_evg_00124',
@@ -38,24 +38,178 @@ class _BatteryMonitoringTabState extends ConsumerState<BatteryMonitoringTab> {
     tempHistory: [27.0, 27.5, 28.0, 28.0, 28.0, 28.0],
     currentHistory: [-10.0, -12.0, -12.5, -12.5, -12.5, -12.5],
   );
-
+*/
   @override
   Widget build(BuildContext context) {
     final batteryState = ref.watch(batteryProvider);
-    
-    // Fallback if no batteries are connected to guarantee the mockup layout is rendered
-    final activeList = batteryState.connectedBatteries.isNotEmpty
-        ? batteryState.connectedBatteries
-        : [_mockBattery];
 
-    // Determine currently selected battery
-    final String selectedId = _selectedBatteryId ?? activeList.first.id;
-    final selectedBattery = activeList.firstWhere(
-      (b) => b.id == selectedId,
-      orElse: () => activeList.first,
+    // 1. Get ONLY real connected batteries. NO MOCK DATA.
+    final allConnected = batteryState.connectedBatteries
+        .where((b) => b.status == BatteryStatus.connected)
+        .toList();
+
+    // Map to BGS names for consistency with mockup screenshots
+    final activeList = allConnected.map((b) {
+      return b.copyWith(name: b.name.replaceAll('BOS', 'BGS'));
+    }).toList();
+
+    // 2. Safely determine selected battery (can be null if disconnected)
+    final String selectedId = _selectedBatteryId ?? (activeList.isNotEmpty ? activeList.first.id : '');
+    final selectedBattery = activeList.isNotEmpty
+        ? activeList.firstWhere(
+            (b) => b.id == selectedId,
+            orElse: () => activeList.first,
+          )
+        : null;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FD),
+      body: SafeArea(
+        child: Column(
+          children: [
+            //-HEADER PANEL (Always visible, handles empty state)
+            Container(
+              padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  Flexible(   
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFCCFF00).withOpacity(0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.speed_rounded, color: Color(0xFF15803D), size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            const Flexible(
+                              child: Text(
+                                'Monitoring',
+                                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF151833), letterSpacing: -0.5),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'REAL-TIME PERFORMANCE',
+                          style: TextStyle(fontSize: 10, color: Color(0xFF8C93A8), fontWeight: FontWeight.bold, letterSpacing: 1),
+                          maxLines: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  ConstrainedBox(
+                    constraints: BoxConstraints(maxWidth: MediaQuery.of(context).size.width * 0.45),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        gradient: activeList.isNotEmpty 
+                            ? const LinearGradient(colors: [Color(0xFF2E1C9F), Color(0xFF160E58)], begin: Alignment.topLeft, end: Alignment.bottomRight)
+                            : const LinearGradient(colors: [Color(0xFFCBD5E1), Color(0xFF94A3B8)], begin: Alignment.topLeft, end: Alignment.bottomRight),
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: activeList.isNotEmpty ? [BoxShadow(color: const Color(0xFF2E1C9F).withOpacity(0.3), blurRadius: 10, offset: const Offset(0, 4))] : [],
+                      ),
+                      child: activeList.isNotEmpty
+                          ? DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedId,
+                                isDense: true,
+                                isExpanded: true, 
+                                dropdownColor: const Color(0xFF160E58),
+                                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFFCCFF00), size: 20),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                items: activeList.map((b) {
+                                  return DropdownMenuItem<String>(
+                                    value: b.id,
+                                    child: Row(
+                                      children: [
+                                        Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFCCFF00), shape: BoxShape.circle)),
+                                        const SizedBox(width: 8),
+                                        Expanded(child: Text(b.name, overflow: TextOverflow.ellipsis)),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedBatteryId = val);
+                                },
+                              ),
+                            )
+                          : const Text("Not Available", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13), textAlign: TextAlign.center, overflow: TextOverflow.ellipsis),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+
+            // ── SCROLLABLE BODY ──
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                // Show real data if connected, otherwise show Empty State!
+                child: selectedBattery != null 
+                    ? _buildActiveDashboard(selectedBattery, batteryState)
+                    : _buildEmptyState(),
+              ),
+            ),
+          ],
+        ),
+      ),
     );
+  }
 
-    // Calculate Dynamic Values for selected battery
+  // Helper widget for when NO batteries are connected
+  Widget _buildEmptyState() {
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const SizedBox(height: 80),
+        Container(
+          padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(16),
+                decoration: const BoxDecoration(color: Color(0xFFF8F9FD), shape: BoxShape.circle),
+                child: const Icon(Icons.bluetooth_disabled_rounded, color: Color(0xFF151833), size: 32),
+              ),
+              const SizedBox(height: 16),
+              const Text(
+                'No Batteries Connected',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Connect to a smart battery in the Scanner tab to begin live monitoring.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 12, color: Color(0xFF8C93A8), fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // Helper widget that handles all the active charting and UI calculations
+  Widget _buildActiveDashboard(BatteryModel selectedBattery, BatteryState batteryState) {
     final double soc = selectedBattery.soc;
     final double voltage = selectedBattery.voltage;
     final double current = selectedBattery.current;
@@ -64,735 +218,351 @@ class _BatteryMonitoringTabState extends ConsumerState<BatteryMonitoringTab> {
         ? selectedBattery.remainingCapacity
         : (selectedBattery.designCapacity * (soc / 100.0));
 
-    // Estimated time calculation
-    String estTime = '2h 35m'; // default mockup value
-    if (selectedBattery.id != _mockBattery.id) {
-      if (current < 0) {
-        final double hours = remainingCapacity / current.abs();
-        final int h = hours.toInt();
-        final int m = ((hours - h) * 60).toInt();
-        estTime = '${h}h ${m}m';
-      } else if (current > 0) {
-        final double emptyCap = selectedBattery.designCapacity - remainingCapacity;
-        final double hours = emptyCap / current;
-        final int h = hours.toInt();
-        final int m = ((hours - h) * 60).toInt();
-        estTime = '${h}h ${m}m';
-      } else {
-        estTime = '--';
-      }
+    // Calculate real estimated time instead of dummy data
+    String estTime = '--';
+    if (current < 0) {
+      final double hours = remainingCapacity / current.abs();
+      final int h = hours.toInt();
+      final int m = ((hours - h) * 60).toInt();
+      estTime = '${h}h ${m}m';
+    } else if (current > 0) {
+      final double emptyCap = selectedBattery.designCapacity - remainingCapacity;
+      final double hours = emptyCap / current;
+      final int h = hours.toInt();
+      final int m = ((hours - h) * 60).toInt();
+      estTime = '${h}h ${m}m';
     }
 
-    final String statusText = selectedBattery.status == BatteryStatus.faulty
-        ? 'Faulty'
-        : 'Normal';
+    final String statusText = selectedBattery.status == BatteryStatus.faulty ? 'Faulty' : 'Normal';
 
-    return Scaffold(
-      backgroundColor: const Color(0xFFF8F9FD),
-      body: SafeArea(
-        child: Column(
-          children: [
-            // ── HEADER PANEL ──────────────────────────────────────────────────
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Row(
-                    children: [
-                      IconButton(
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF151833), size: 20),
-                        onPressed: () {
-                          if (Navigator.of(context).canPop()) {
-                            Navigator.of(context).pop();
-                          } else {
-                            // If embedded in tab bar, default action is going back to Home
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(
-                                content: Text('Use the bottom navigation to switch tabs'),
-                                duration: Duration(seconds: 1),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                      const SizedBox(width: 14),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Battery Monitoring',
-                            style: TextStyle(
-                              fontSize: 18,
-                              fontWeight: FontWeight.w700,
-                              color: Color(0xFF151833),
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              DropdownButtonHideUnderline(
-                                child: DropdownButton<String>(
-                                  value: selectedId,
-                                  isDense: true,
-                                  icon: const Icon(
-                                    Icons.keyboard_arrow_down_rounded,
-                                    color: Color(0xFF8C93A8),
-                                    size: 15,
-                                  ),
-                                  alignment: Alignment.centerLeft,
-                                  items: activeList.map((b) {
-                                    return DropdownMenuItem<String>(
-                                      value: b.id,
-                                      child: Text(
-                                        'Evegah Smart BMS • ${b.name}',
-                                        style: const TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0xFF8C93A8),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                    );
-                                  }).toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      setState(() {
-                                        _selectedBatteryId = val;
-                                      });
-                                    }
-                                  },
-                                ),
-                              ),
-                            ],
-                          ),
-                          const SizedBox(height: 2),
-                          Row(
-                            children: [
-                              Container(
-                                width: 7,
-                                height: 7,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFCCFF00), // Lime green connected dot
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 6),
-                              const Text(
-                                'Connected',
-                                style: TextStyle(
-                                  fontSize: 11,
-                                  color: Color(0xFF8CE300), // Lime green/yellow
-                                  fontWeight: FontWeight.w700,
-                                ),
-                              ),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  Row(
-                    children: [
-                      // Bell Icon with yellow badge
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-                        ),
-                        child: Stack(
-                          alignment: Alignment.center,
-                          children: [
-                            const Icon(Icons.notifications_none_rounded, color: Color(0xFF151833), size: 20),
-                            Positioned(
-                              top: 8,
-                              right: 8,
-                              child: Container(
-                                width: 7,
-                                height: 7,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFFCCFF00), // Yellow-green badge
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      // Three Dots Button
-                      Container(
-                        width: 38,
-                        height: 38,
-                        decoration: BoxDecoration(
-                          color: Colors.white,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-                        ),
-                        child: const Icon(Icons.more_horiz_rounded, color: Color(0xFF151833), size: 20),
-                      ),
-                    ],
-                  ),
-                ],
-              ),
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        // ── TOP GRADIENT SOC CARD ──────────────────────────────────
+        Container(
+          width: double.infinity,
+          height: 160,
+          decoration: BoxDecoration(
+            gradient: const LinearGradient(
+              colors: [Color(0xFF2E1C9F), Color(0xFF160E58)],
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
             ),
-
-            // ── SCROLLABLE BODY ───────────────────────────────────────────────
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                child: Column(
+            borderRadius: BorderRadius.circular(24),
+            boxShadow: [
+              BoxShadow(
+                color: const Color(0xFF2E1C9F).withOpacity(0.25),
+                blurRadius: 15,
+                offset: const Offset(0, 8),
+              ),
+            ],
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              Positioned(
+                right: -10,
+                bottom: -15,
+                child: Opacity(
+                  opacity: 0.08,
+                  child: const Icon(Icons.verified_user_rounded, size: 130, color: Colors.white),
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Row(
                   children: [
-                    const SizedBox(height: 8),
-
-                    // ── TOP GRADIENT SOC CARD ──────────────────────────────────
-                    Container(
-                      width: double.infinity,
-                      height: 160,
-                      decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: [Color(0xFF2E1C9F), Color(0xFF160E58)],
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                        ),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: [
-                          BoxShadow(
-                            color: const Color(0xFF2E1C9F).withOpacity(0.25),
-                            blurRadius: 15,
-                            offset: const Offset(0, 8),
-                          ),
-                        ],
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Stack(
+                    Expanded(
+                      flex: 5,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          // Shield Watermark
-                          Positioned(
-                            right: -10,
-                            bottom: -15,
-                            child: Opacity(
-                              opacity: 0.08,
-                              child: const Icon(
-                                Icons.verified_user_rounded,
-                                size: 130,
-                                color: Colors.white,
-                              ),
-                            ),
+                          const Text('State of Charge', style: TextStyle(fontSize: 12, color: Color(0xFFC0BDF2), fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 4),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text('${soc.toInt()}', style: const TextStyle(fontSize: 42, fontWeight: FontWeight.w800, color: Colors.white, letterSpacing: -1)),
+                              const SizedBox(width: 2),
+                              const Text('%', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.white)),
+                            ],
                           ),
-
-                          Padding(
-                            padding: const EdgeInsets.all(20.0),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            decoration: BoxDecoration(color: const Color(0xFFCCFF00).withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
                             child: Row(
+                              mainAxisSize: MainAxisSize.min,
                               children: [
-                                // Left Details
-                                Expanded(
-                                  flex: 5,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Text(
-                                        'State of Charge',
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Color(0xFFC0BDF2),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                                        textBaseline: TextBaseline.alphabetic,
-                                        children: [
-                                          Text(
-                                            '${soc.toInt()}',
-                                            style: const TextStyle(
-                                              fontSize: 42,
-                                              fontWeight: FontWeight.w800,
-                                              color: Colors.white,
-                                              letterSpacing: -1,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 2),
-                                          const Text(
-                                            '%',
-                                            style: TextStyle(
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFFCCFF00).withOpacity(0.12),
-                                          borderRadius: BorderRadius.circular(8),
-                                        ),
-                                        child: Row(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: const [
-                                            Text(
-                                              'Charging',
-                                              style: TextStyle(
-                                                color: Color(0xFFCCFF00),
-                                                fontSize: 10,
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                            ),
-                                            SizedBox(width: 4),
-                                            Icon(
-                                              Icons.flash_on_rounded,
-                                              color: Color(0xFFCCFF00),
-                                              size: 10,
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-
-                                // Center Circular Gauge
-                                Expanded(
-                                  flex: 4,
-                                  child: Center(
-                                    child: SizedBox(
-                                      width: 85,
-                                      height: 85,
-                                      child: Stack(
-                                        alignment: Alignment.center,
-                                        children: [
-                                          CustomPaint(
-                                            size: const Size(85, 85),
-                                            painter: CircularSocPainter(
-                                              soc: soc,
-                                              progressColor: const Color(0xFFCCFF00),
-                                            ),
-                                          ),
-                                          const Icon(
-                                            Icons.flash_on_rounded,
-                                            color: Colors.white,
-                                            size: 32,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ),
-
-                                // Right Details
-                                Expanded(
-                                  flex: 5,
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    mainAxisAlignment: MainAxisAlignment.center,
-                                    children: [
-                                      const Text(
-                                        'Remaining Capacity',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFFC0BDF2),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Row(
-                                        crossAxisAlignment: CrossAxisAlignment.baseline,
-                                        textBaseline: TextBaseline.alphabetic,
-                                        children: [
-                                          Text(
-                                            remainingCapacity.toStringAsFixed(1),
-                                            style: const TextStyle(
-                                              fontSize: 20,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                          const SizedBox(width: 2),
-                                          const Text(
-                                            'Ah',
-                                            style: TextStyle(
-                                              fontSize: 11,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.white,
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                      const SizedBox(height: 12),
-                                      const Text(
-                                        'Estimated Time',
-                                        style: TextStyle(
-                                          fontSize: 11,
-                                          color: Color(0xFFC0BDF2),
-                                          fontWeight: FontWeight.w500,
-                                        ),
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        estTime,
-                                        style: const TextStyle(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.bold,
-                                          color: Colors.white,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
+                                Text(current > 0 ? 'Charging' : (current < 0 ? 'Discharging' : 'Idle'), style: const TextStyle(color: Color(0xFFCCFF00), fontSize: 10, fontWeight: FontWeight.bold)),
+                                const SizedBox(width: 4),
+                                const Icon(Icons.flash_on_rounded, color: Color(0xFFCCFF00), size: 10),
                               ],
                             ),
                           ),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // ── 4 MINI KPI CARDS ROW ──────────────────────────────────
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildMiniKpiCard(
-                            label: 'SOC',
-                            value: '${soc.toInt()}%',
-                            icon: Icons.flash_on_rounded,
-                            hasUnderline: true,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildMiniKpiCard(
-                            label: 'Total Voltage',
-                            value: '${voltage.toStringAsFixed(1)}v',
-                            icon: Icons.electric_bolt_rounded,
-                            hasUnderline: true,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildMiniKpiCard(
-                            label: 'Temperature',
-                            value: '${temp.toInt()}°c',
-                            icon: Icons.thermostat_rounded,
-                            hasUnderline: true,
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: _buildMiniKpiCard(
-                            label: 'Status',
-                            value: statusText,
-                            icon: Icons.verified_user_rounded,
-                            hasUnderline: false,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
-
-                    // ── 2X2 TELEMETRY GRID ────────────────────────────────────
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Left Column (SOC and Current)
-                        Expanded(
-                          child: Column(
+                    Expanded(
+                      flex: 4,
+                      child: Center(
+                        child: SizedBox(
+                          width: 85,
+                          height: 85,
+                          child: Stack(
+                            alignment: Alignment.center,
                             children: [
-                              // 1. State of Charge (SOC) Card
-                              _buildTelemetryCard(
-                                title: 'State of Charge (SOC)',
-                                value: '${soc.toInt()}%',
-                                content: SizedBox(
-                                  height: 100,
-                                  width: double.infinity,
-                                  child: Stack(
-                                    alignment: Alignment.center,
-                                    children: [
-                                      CustomPaint(
-                                        size: const Size(100, 100),
-                                        painter: SemiCircularSocPainter(
-                                          soc: soc,
-                                          progressColor: const Color(0xFFCCFF00),
-                                        ),
-                                      ),
-                                      Positioned(
-                                        top: 24,
-                                        child: Column(
-                                          children: [
-                                            const Icon(Icons.flash_on_rounded, color: Color(0xFFCCFF00), size: 24),
-                                            const SizedBox(height: 2),
-                                            const Text(
-                                              'SOC',
-                                              style: TextStyle(
-                                                fontSize: 9,
-                                                fontWeight: FontWeight.w700,
-                                                color: Color(0xFF8C93A8),
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                footer: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFCCFF00).withOpacity(0.12),
-                                    borderRadius: BorderRadius.circular(8),
-                                  ),
-                                  child: Row(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: const [
-                                      Text(
-                                        'Charging',
-                                        style: TextStyle(
-                                          color: Color(0xFF8CE300),
-                                          fontSize: 10,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      SizedBox(width: 4),
-                                      Icon(Icons.flash_on_rounded, color: Color(0xFF8CE300), size: 10),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-
-                              // 2. Current Card
-                              _buildTelemetryCard(
-                                title: 'Current',
-                                value: '${current.toStringAsFixed(1)}A',
-                                subtitle: current < 0 ? 'Discharging' : (current > 0 ? 'Charging' : 'Idle'),
-                                content: SizedBox(
-                                  height: 80,
-                                  width: double.infinity,
-                                  child: CustomPaint(
-                                    size: const Size(100, 80),
-                                    painter: CurrentDialPainter(current: current),
-                                  ),
-                                ),
-                                footer: const Opacity(
-                                  opacity: 0.15,
-                                  child: Icon(Icons.flash_on_rounded, color: Color(0xFF151833), size: 18),
-                                ),
-                              ),
+                              CustomPaint(size: const Size(85, 85), painter: CircularSocPainter(soc: soc, progressColor: const Color(0xFFCCFF00))),
+                              const Icon(Icons.flash_on_rounded, color: Colors.white, size: 32),
                             ],
                           ),
                         ),
-                        const SizedBox(width: 12),
-
-                        // Right Column (Voltage and Temperature)
-                        Expanded(
-                          child: Column(
-                            children: [
-                              // 3. Voltage Card
-                              _buildTelemetryCard(
-                                title: 'Voltage',
-                                customHeaderRight: Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFEEF2FF),
-                                    borderRadius: BorderRadius.circular(6),
-                                  ),
-                                  child: DropdownButtonHideUnderline(
-                                    child: DropdownButton<String>(
-                                      value: _selectedVoltageMode,
-                                      isDense: true,
-                                      icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF231B69), size: 12),
-                                      items: const [
-                                        DropdownMenuItem(
-                                          value: 'Total',
-                                          child: Text('Total', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF231B69))),
-                                        ),
-                                        DropdownMenuItem(
-                                          value: 'Cells',
-                                          child: Text('Cells', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF231B69))),
-                                        ),
-                                      ],
-                                      onChanged: (val) {
-                                        if (val != null) {
-                                          setState(() => _selectedVoltageMode = val);
-                                        }
-                                      },
-                                    ),
-                                  ),
-                                ),
-                                value: '${voltage.toStringAsFixed(1)}v',
-                                subtitle: 'Total Voltage',
-                                content: Stack(
-                                  clipBehavior: Clip.none,
-                                  children: [
-                                    _buildVoltageChart(selectedBattery),
-                                    Positioned(
-                                      top: 4,
-                                      left: 55,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                        decoration: BoxDecoration(
-                                          color: const Color(0xFF231B69),
-                                          borderRadius: BorderRadius.circular(6),
-                                        ),
-                                        child: Text(
-                                          '${voltage.toStringAsFixed(1)}v',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 7.5,
-                                            fontWeight: FontWeight.w700,
-                                          ),
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                footer: InkWell(
-                                  onTap: () {
-                                    // Open cell voltages list
-                                    _showCellVoltagesSheet(context, selectedBattery);
-                                  },
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
-                                    decoration: BoxDecoration(
-                                      color: const Color(0xFFF1EEFF),
-                                      borderRadius: BorderRadius.circular(16),
-                                    ),
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: const [
-                                        Text(
-                                          'View Cell Voltages',
-                                          style: TextStyle(
-                                            color: Color(0xFF231B69),
-                                            fontSize: 9.5,
-                                            fontWeight: FontWeight.bold,
-                                          ),
-                                        ),
-                                        SizedBox(width: 4),
-                                        Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF231B69), size: 7.5),
-                                      ],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-
-                              // 4. Temperature Card
-                              _buildTelemetryCard(
-                                title: 'Temperature',
-                                value: '${temp.toInt()}°c',
-                                subtitle: 'BMS Temp',
-                                content: SizedBox(
-                                  height: 100,
-                                  width: double.infinity,
-                                  child: Row(
-                                    children: [
-                                      // Thermometer Visual
-                                      Expanded(
-                                        flex: 5,
-                                        child: Column(
-                                          children: [
-                                            Expanded(
-                                              child: CustomPaint(
-                                                size: const Size(45, 75),
-                                                painter: ThermometerPainter(temp: temp),
-                                              ),
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: const Color(0xFFE2FDF2),
-                                                borderRadius: BorderRadius.circular(6),
-                                              ),
-                                              child: Row(
-                                                mainAxisSize: MainAxisSize.min,
-                                                children: const [
-                                                  Text(
-                                                    'Good',
-                                                    style: TextStyle(
-                                                      color: Color(0xFF15803D),
-                                                      fontSize: 8,
-                                                      fontWeight: FontWeight.w700,
-                                                    ),
-                                                  ),
-                                                  SizedBox(width: 2),
-                                                  Icon(Icons.check, color: Color(0xFF15803D), size: 8),
-                                                ],
-                                              ),
-                                            ),
-                                          ],
-                                        ),
-                                      ),
-                                      const SizedBox(width: 6),
-                                      // Stats Card
-                                      Expanded(
-                                        flex: 6,
-                                        child: Container(
-                                          padding: const EdgeInsets.all(6),
-                                          decoration: BoxDecoration(
-                                            color: const Color(0xFFF1EEFF),
-                                            borderRadius: BorderRadius.circular(10),
-                                          ),
-                                          child: Column(
-                                            crossAxisAlignment: CrossAxisAlignment.start,
-                                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                                            children: [
-                                              _buildTempStatRow('Min', '${(temp - 6).toInt()}°c'),
-                                              _buildTempStatRow('Max', '${(temp + 4).toInt()}°c'),
-                                              _buildTempStatRow('Average', '${(temp - 1).toInt()}°c'),
-                                            ],
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 20),
-
-                    // ── SECONDARY TAB BAR ─────────────────────────────────────
-                    Container(
-                      decoration: const BoxDecoration(
-                        border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1.5)),
                       ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceAround,
+                    ),
+                    Expanded(
+                      flex: 5,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildSubTabItem(0, 'Live Data', Icons.analytics_outlined),
-                          _buildSubTabItem(1, 'Alerts', Icons.notifications_active_outlined, badgeCount: 2),
-                          _buildSubTabItem(2, 'History', Icons.history_rounded),
-                          _buildSubTabItem(3, 'Settings', Icons.settings_outlined),
+                          const Text('Remaining Capacity', style: TextStyle(fontSize: 11, color: Color(0xFFC0BDF2), fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 2),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.baseline,
+                            textBaseline: TextBaseline.alphabetic,
+                            children: [
+                              Text(remainingCapacity.toStringAsFixed(1), style: const TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: Colors.white)),
+                              const SizedBox(width: 2),
+                              const Text('Ah', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Colors.white)),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text('Estimated Time', style: TextStyle(fontSize: 11, color: Color(0xFFC0BDF2), fontWeight: FontWeight.w500)),
+                          const SizedBox(height: 2),
+                          Text(estTime, style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
                         ],
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // ── SUB-TAB DYNAMIC VIEW CONTENT ──────────────────────────
-                    _buildSubTabViewContent(selectedBattery, batteryState),
-                    const SizedBox(height: 24),
                   ],
                 ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // ── 4 MINI KPI CARDS ROW ──────────────────────────────────
+        Row(
+          children: [
+            Expanded(child: _buildMiniKpiCard(label: 'SOC', value: '${soc.toInt()}%', icon: Icons.flash_on_rounded, hasUnderline: true)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildMiniKpiCard(label: 'Total Voltage', value: '${voltage.toStringAsFixed(1)}v', icon: Icons.electric_bolt_rounded, hasUnderline: true)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildMiniKpiCard(label: 'Temperature', value: '${temp.toInt()}°c', icon: Icons.thermostat_rounded, hasUnderline: true)),
+            const SizedBox(width: 8),
+            Expanded(child: _buildMiniKpiCard(label: 'Status', value: statusText, icon: Icons.verified_user_rounded, hasUnderline: false)),
+          ],
+        ),
+        const SizedBox(height: 16),
+
+        // ── 2X2 TELEMETRY GRID ────────────────────────────────────
+        Row(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Expanded(
+              child: Column(
+                children: [
+                  _buildTelemetryCard(
+                    title: 'State of Charge (SOC)',
+                    value: '${soc.toInt()}%',
+                    content: SizedBox(
+                      height: 100,
+                      width: double.infinity,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          CustomPaint(size: const Size(100, 100), painter: SemiCircularSocPainter(soc: soc, progressColor: const Color(0xFFCCFF00))),
+                          Positioned(
+                            top: 24,
+                            child: Column(
+                              children: const [
+                                Icon(Icons.flash_on_rounded, color: Color(0xFFCCFF00), size: 24),
+                                SizedBox(height: 2),
+                                Text('SOC', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w700, color: Color(0xFF8C93A8))),
+                              ],
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    footer: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      decoration: BoxDecoration(color: const Color(0xFFCCFF00).withOpacity(0.12), borderRadius: BorderRadius.circular(8)),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Text(current > 0 ? 'Charging' : (current < 0 ? 'Discharging' : 'Idle'), style: const TextStyle(color: Color(0xFF8CE300), fontSize: 10, fontWeight: FontWeight.bold)),
+                          const SizedBox(width: 4),
+                          const Icon(Icons.flash_on_rounded, color: Color(0xFF8CE300), size: 10),
+                        ],
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTelemetryCard(
+                    title: 'Current',
+                    value: '${current.toStringAsFixed(1)}A',
+                    subtitle: current < 0 ? 'Discharging' : (current > 0 ? 'Charging' : 'Idle'),
+                    content: SizedBox(
+                      height: 80,
+                      width: double.infinity,
+                      child: CustomPaint(size: const Size(100, 80), painter: CurrentDialPainter(current: current)),
+                    ),
+                    footer: const Opacity(opacity: 0.15, child: Icon(Icons.flash_on_rounded, color: Color(0xFF151833), size: 18)),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                children: [
+                  _buildTelemetryCard(
+                    title: 'Voltage',
+                    customHeaderRight: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 1.5),
+                      decoration: BoxDecoration(color: const Color(0xFFEEF2FF), borderRadius: BorderRadius.circular(6)),
+                      child: DropdownButtonHideUnderline(
+                        child: DropdownButton<String>(
+                          value: _selectedVoltageMode,
+                          isDense: true,
+                          icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFF231B69), size: 12),
+                          items: const [
+                            DropdownMenuItem(value: 'Total', child: Text('Total', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF231B69)))),
+                            DropdownMenuItem(value: 'Cells', child: Text('Cells', style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF231B69)))),
+                          ],
+                          onChanged: (val) {
+                            if (val != null) setState(() => _selectedVoltageMode = val);
+                          },
+                        ),
+                      ),
+                    ),
+                    value: '${voltage.toStringAsFixed(1)}v',
+                    subtitle: 'Total Voltage',
+                    content: Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        _buildVoltageChart(selectedBattery),
+                        Positioned(
+                          top: 4,
+                          left: 55,
+                          child: Container(
+                            padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
+                            decoration: BoxDecoration(color: const Color(0xFF231B69), borderRadius: BorderRadius.circular(6)),
+                            child: Text('${voltage.toStringAsFixed(1)}v', style: const TextStyle(color: Colors.white, fontSize: 7.5, fontWeight: FontWeight.w700)),
+                          ),
+                        ),
+                      ],
+                    ),
+                    footer: InkWell(
+                      onTap: () => _showCellVoltagesSheet(context, selectedBattery),
+                      borderRadius: BorderRadius.circular(16),
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                        decoration: BoxDecoration(color: const Color(0xFFF1EEFF), borderRadius: BorderRadius.circular(16)),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: const [
+                            Text('View Cell Voltages', style: TextStyle(color: Color(0xFF231B69), fontSize: 9.5, fontWeight: FontWeight.bold)),
+                            SizedBox(width: 4),
+                            Icon(Icons.arrow_forward_ios_rounded, color: Color(0xFF231B69), size: 7.5),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildTelemetryCard(
+                    title: 'Temperature',
+                    value: '${temp.toInt()}°c',
+                    subtitle: 'BMS Temp',
+                    content: SizedBox(
+                      height: 100,
+                      width: double.infinity,
+                      child: Row(
+                        children: [
+                          Expanded(
+                            flex: 5,
+                            child: Column(
+                              children: [
+                                Expanded(child: CustomPaint(size: const Size(45, 75), painter: ThermometerPainter(temp: temp))),
+                                const SizedBox(height: 4),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                  decoration: BoxDecoration(color: const Color(0xFFE2FDF2), borderRadius: BorderRadius.circular(6)),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: const [
+                                      Text('Good', style: TextStyle(color: Color(0xFF15803D), fontSize: 8, fontWeight: FontWeight.w700)),
+                                      SizedBox(width: 2),
+                                      Icon(Icons.check, color: Color(0xFF15803D), size: 8),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            flex: 6,
+                            child: Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(color: const Color(0xFFF1EEFF), borderRadius: BorderRadius.circular(10)),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                                children: [
+                                  _buildTempStatRow('Min', '${(temp - 6).toInt()}°c'),
+                                  _buildTempStatRow('Max', '${(temp + 4).toInt()}°c'),
+                                  _buildTempStatRow('Average', '${(temp - 1).toInt()}°c'),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
         ),
-      ),
+        const SizedBox(height: 20),
+
+        // ── SECONDARY TAB BAR ─────────────────────────────────────
+        Container(
+          decoration: const BoxDecoration(
+            border: Border(bottom: BorderSide(color: Color(0xFFF1F5F9), width: 1.5)),
+          ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _buildSubTabItem(0, 'Live Data', Icons.analytics_outlined),
+              _buildSubTabItem(1, 'Alerts', Icons.notifications_active_outlined, badgeCount: 2),
+              _buildSubTabItem(2, 'History', Icons.history_rounded),
+              _buildSubTabItem(3, 'Settings', Icons.settings_outlined),
+            ],
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // ── SUB-TAB DYNAMIC VIEW CONTENT ──────────────────────────
+        _buildSubTabViewContent(selectedBattery, batteryState),
+        const SizedBox(height: 24),
+      ],
     );
   }
 

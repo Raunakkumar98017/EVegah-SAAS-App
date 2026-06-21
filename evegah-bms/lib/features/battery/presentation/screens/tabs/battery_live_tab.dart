@@ -101,7 +101,7 @@ class _BatteryLiveTabState extends ConsumerState<BatteryLiveTab>
       body: SafeArea(
         child: Column(
           children: [
-            // Header panel matching Screenshot 3
+            /*// Header panel matching Screenshot 3
             Padding(
               padding: const EdgeInsets.symmetric(
                 horizontal: 16.0,
@@ -135,95 +135,144 @@ class _BatteryLiveTabState extends ConsumerState<BatteryLiveTab>
                   ),
                 ],
               ),
-            ),
+            ),*/
+              
+                   
+              //-HEADER PANEL (Always visible, handles empty state safely)
+            Container(
+              padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 16.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  // 1. Title Area
+                  Flexible(   
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFCCFF00).withOpacity(0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.insights_rounded, color: Color(0xFF15803D), size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            const Flexible(
+                              child: Text(
+                                'Analytics',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF151833),
+                                  letterSpacing: -0.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'INSIGHTS & DIAGNOSTICS',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF8C93A8),
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1,
+                          ),
+                          maxLines: 1,
+                        ),
+                      ],
+                    ),
+                  ),
+                  
+                  const SizedBox(width: 12),
 
+                  // 2. Dropdown Area (Always present, changes to disabled state if empty)
+                  ConstrainedBox(
+                    constraints: BoxConstraints(
+                      maxWidth: MediaQuery.of(context).size.width * 0.45,
+                    ),
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                      decoration: BoxDecoration(
+                        // Blue gradient if connected, Grey if disconnected
+                        gradient: activeList.isNotEmpty 
+                            ? const LinearGradient(
+                                colors: [Color(0xFF2E1C9F), Color(0xFF160E58)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              )
+                            : const LinearGradient(
+                                colors: [Color(0xFFCBD5E1), Color(0xFF94A3B8)],
+                                begin: Alignment.topLeft,
+                                end: Alignment.bottomRight,
+                              ),
+                        borderRadius: BorderRadius.circular(16),
+                        // Only show shadow if a battery is connected
+                        boxShadow: activeList.isNotEmpty ? [
+                          BoxShadow(
+                            color: const Color(0xFF2E1C9F).withOpacity(0.3),
+                            blurRadius: 10,
+                            offset: const Offset(0, 4),
+                          ),
+                        ] : [],
+                      ),
+                      // The child checks if the list is empty right here:
+                      child: activeList.isNotEmpty
+                          ? DropdownButtonHideUnderline(
+                              child: DropdownButton<String>(
+                                value: selectedId,
+                                isDense: true,
+                                isExpanded: true, 
+                                dropdownColor: const Color(0xFF160E58),
+                                icon: const Icon(Icons.keyboard_arrow_down_rounded, color: Color(0xFFCCFF00), size: 20),
+                                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                                items: activeList.map((b) {
+                                  return DropdownMenuItem<String>(
+                                    value: b.id,
+                                    child: Row(
+                                      children: [
+                                        Container(width: 8, height: 8, decoration: const BoxDecoration(color: Color(0xFFCCFF00), shape: BoxShape.circle)),
+                                        const SizedBox(width: 8),
+                                        Expanded(child: Text(b.name, overflow: TextOverflow.ellipsis)),
+                                      ],
+                                    ),
+                                  );
+                                }).toList(),
+                                onChanged: (val) {
+                                  if (val != null) setState(() => _selectedBatteryId = val);
+                                },
+                              ),
+                            )
+                          : const Text(
+                              "Not Available",
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontWeight: FontWeight.bold,
+                                fontSize: 13,
+                              ),
+                              textAlign: TextAlign.center,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title & Dropdown selector row matching mockup
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'Battery Analytics',
-                              style: TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF151833),
-                              ),
-                            ),
-                            SizedBox(height: 4),
-                            Text(
-                              'Deep insights and diagnostics',
-                              style: TextStyle(
-                                fontSize: 13,
-                                color: Color(0xFF8C93A8),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Dark styled Dropdown Selector matching mockup
-                        if (activeList.isNotEmpty)
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 10,
-                              vertical: 2,
-                            ),
-                            decoration: BoxDecoration(
-                              color: const Color(0xFF1E1A47),
-                              borderRadius: BorderRadius.circular(12),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: selectedId,
-                                dropdownColor: const Color(0xFF1E1A47),
-                                icon: const Icon(
-                                  Icons.keyboard_arrow_down,
-                                  color: Colors.white,
-                                  size: 18,
-                                ),
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                  fontSize: 12,
-                                ),
-                                items: activeList.map((b) {
-                                  return DropdownMenuItem<String>(
-                                    value: b.id,
-                                    child: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        const Icon(
-                                          Icons.shield_outlined,
-                                          color: Colors.white,
-                                          size: 14,
-                                        ),
-                                        const SizedBox(width: 6),
-                                        Text(b.name),
-                                      ],
-                                    ),
-                                  );
-                                }).toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() {
-                                      _selectedBatteryId = val;
-                                    });
-                                  }
-                                },
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                
                     const SizedBox(height: 16),
 
                     if (selectedBattery != null) ...[
@@ -815,24 +864,27 @@ class _BatteryLiveTabState extends ConsumerState<BatteryLiveTab>
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
+            Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Live Trends (Last 60 Seconds)',
-                style: TextStyle(
-                  fontSize: 13,
-                  fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+              // FIX: Wrap the title in an Expanded widget with truncation
+              const Expanded(
+                child: Text(
+                  'Live Telemetry',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF1E293B),
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
+              const SizedBox(width: 8),
               Row(
                 children: [
                   Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 8,
-                      vertical: 4,
-                    ),
+                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF8F9FD),
                       borderRadius: BorderRadius.circular(8),

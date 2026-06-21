@@ -16,12 +16,13 @@ class BatteryScanTab extends ConsumerStatefulWidget {
 class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
     with SingleTickerProviderStateMixin {
   late AnimationController _radarController;
-  final Set<String> _selectedBatteryIds = {}; // Selection set starts empty
+  
+  // Tracks connection attempts to prevent spamming and track failures
+  final Set<String> _autoConnectingIds = {};
 
   @override
   void initState() {
     super.initState();
-    // Slow, smooth radar sweep for graceful scanning
     _radarController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 10000), // Slow sweep (10s)
@@ -30,6 +31,8 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
     if (widget.isVisible) {
       _radarController.repeat();
       WidgetsBinding.instance.addPostFrameCallback((_) {
+        // Clear memory on initial load and start scanning
+        _autoConnectingIds.clear();
         ref.read(batteryProvider.notifier).startScan();
       });
     }
@@ -41,6 +44,7 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
     if (widget.isVisible != oldWidget.isVisible) {
       if (widget.isVisible) {
         _radarController.repeat();
+        _autoConnectingIds.clear(); // Clear memory when returning to tab
         ref.read(batteryProvider.notifier).startScan();
       } else {
         _radarController.stop();
@@ -53,26 +57,6 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
   void dispose() {
     _radarController.dispose();
     super.dispose();
-  }
-
-  void _toggleSelectAll(bool? value, List<BatteryModel> batteries) {
-    setState(() {
-      if (value == true) {
-        _selectedBatteryIds.addAll(batteries.map((b) => b.id));
-      } else {
-        _selectedBatteryIds.clear();
-      }
-    });
-  }
-
-  void _toggleSelectBattery(String id) {
-    setState(() {
-      if (_selectedBatteryIds.contains(id)) {
-        _selectedBatteryIds.remove(id);
-      } else {
-        _selectedBatteryIds.add(id);
-      }
-    });
   }
 
   void _showRenameDialog(BuildContext context, BatteryModel battery) {
@@ -138,6 +122,37 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
   Widget build(BuildContext context) {
     final batteryState = ref.watch(batteryProvider);
     final notifier = ref.read(batteryProvider.notifier);
+
+    // =====================================================================
+    // The Auto-Connect Engine
+    // =====================================================================
+    ref.listen(batteryProvider, (previous, next) {
+      if (next.isScanning) {
+        for (var scanResult in next.scannedDevices) {
+          final device = scanResult.device;
+          final id = device.remoteId.str;
+          
+          final isAlreadyConnected = next.connectedBatteries.any((b) => b.id == id);
+          
+          if (!isAlreadyConnected && !_autoConnectingIds.contains(id)) {
+            // Add to memory so we don't spam requests
+            _autoConnectingIds.add(id); 
+            
+            // Instantly fire connection
+            notifier.connectToDevice(device);
+            
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Auto-connecting to ${device.platformName.isNotEmpty ? device.platformName : id}...'),
+                duration: const Duration(milliseconds: 600),
+                backgroundColor: const Color(0xFF2E1C9F),
+              ),
+            );
+          }
+        }
+      }
+    });
+    // =====================================================================
     
     // Build display list from scanned devices
     final displayList = batteryState.scannedDevices.map((scanResult) {
@@ -168,6 +183,47 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
       );
     }).toList();
 
+    /*// 1. Dummy Connected Battery (Healthy Green)
+    displayList.insert(0, BatteryModel(
+      id: 'dummy_1_connected',
+      name: 'BGS-TEST-CONN',
+      soc: 92, // High battery
+      temperature: 24.0,
+      voltage: 53.2,
+      current: 0.0,
+      rssi: -45, // Strong signal
+      status: BatteryStatus.connected, // Forces the green badge
+      device: null,
+    ));
+
+    // 2. Dummy Connecting Battery (Yellow warning SoC, Grey Button)
+    // We add its ID to the tracking set so the UI thinks we are actively trying to connect
+    _autoConnectingIds.add('dummy_2_connecting'); 
+    displayList.insert(1, BatteryModel(
+      id: 'dummy_2_connecting',
+      name: 'BGS-TEST-SYNC',
+      soc: 45, // Medium battery
+      temperature: 27.0,
+      voltage: 48.1,
+      current: 0.0,
+      rssi: -72,
+      status: BatteryStatus.disconnected,
+      device: null,
+    ));
+
+    // 3. Dummy Failed/Retry Battery (Red critical SoC, Purple Button)
+    displayList.insert(2, BatteryModel(
+      id: 'dummy_3_retry',
+      name: 'BGS-TEST-FAIL',
+      soc: 12, // Critical battery
+      temperature: 34.0,
+      voltage: 42.5,
+      current: 0.0,
+      rssi: -90, // Weak signal
+      status: BatteryStatus.disconnected,
+      device: null,
+    ));*/
+
     final double screenWidth = MediaQuery.of(context).size.width;
 
     return Scaffold(
@@ -175,128 +231,117 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
       body: SafeArea(
         child: Column(
           children: [
-            // Custom Header Bar
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+            //-HEADER PANEL (Static matching Monitor & Analytics)
+            Container(
+              padding: const EdgeInsets.fromLTRB(16.0, 20.0, 16.0, 16.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  IconButton(
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                    icon: const Icon(Icons.arrow_back_ios_new_rounded, color: Color(0xFF151833), size: 20),
-                    onPressed: () {
-                      if (Navigator.of(context).canPop()) {
-                        Navigator.of(context).pop();
-                      }
-                    },
-                  ),
-                  Image.asset(
-                    'assets/logo.png',
-                    height: 38,
-                    fit: BoxFit.contain,
-                    errorBuilder: (context, error, stackTrace) {
-                      return const Text(
-                        'evegah',
-                        style: TextStyle(
-                          fontSize: 22,
-                          fontWeight: FontWeight.bold,
-                          color: Color(0xFF2E1C9F),
-                          letterSpacing: -0.5,
+                  // 1. Title Area
+                  Flexible(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Row(
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.all(6),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFCCFF00).withOpacity(0.15),
+                                shape: BoxShape.circle,
+                              ),
+                              child: const Icon(Icons.bluetooth_searching_rounded, color: Color(0xFF15803D), size: 16),
+                            ),
+                            const SizedBox(width: 8),
+                            const Flexible(
+                              child: Text(
+                                'BMS Scan',
+                                style: TextStyle(
+                                  fontSize: 24,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF151833),
+                                  letterSpacing: -0.5,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                          ],
                         ),
-                      );
-                    },
-                  ),
-                  Container(
-                    width: 38,
-                    height: 38,
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      shape: BoxShape.circle,
-                      border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'AUTO CONNECT & FETCH',
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Color(0xFF8C93A8),
+                            fontWeight: FontWeight.bold,
+                            letterSpacing: 1.2,
+                          ),
+                          maxLines: 1,
+                        ),
+                      ],
                     ),
-                    child: const Icon(Icons.help_outline_rounded, color: Color(0xFF151833), size: 20),
+                  ),
+                  
+                  const SizedBox(width: 12),
+
+                  // 2. Right Area: Dynamic Auto Scan Badge
+                  Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                    decoration: BoxDecoration(
+                      color: batteryState.isScanning ? const Color(0xFFE2FDF2) : const Color(0xFFF1F5F9),
+                      borderRadius: BorderRadius.circular(16),
+                      border: Border.all(
+                        color: batteryState.isScanning ? const Color(0xFFDCFCE7) : const Color(0xFFE2E8F0), 
+                        width: 1.5,
+                      ),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          'Auto Scan',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: batteryState.isScanning ? const Color(0xFF8C93A8) : const Color(0xFF64748B),
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Container(
+                          width: 6,
+                          height: 6,
+                          decoration: BoxDecoration(
+                            color: batteryState.isScanning ? const Color(0xFF22C55E) : const Color(0xFF94A3B8),
+                            shape: BoxShape.circle,
+                          ),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          batteryState.isScanning ? 'Active' : 'Idle',
+                          style: TextStyle(
+                            fontSize: 10,
+                            fontWeight: FontWeight.bold,
+                            color: batteryState.isScanning ? const Color(0xFF15803D) : const Color(0xFF475569),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ],
               ),
             ),
 
+            // ── SCROLLABLE BODY ──
             Expanded(
               child: SingleChildScrollView(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Title section with Active Badge
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: const [
-                            Text(
-                              'BMS Scan',
-                              style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Color(0xFF151833),
-                                letterSpacing: -0.3,
-                              ),
-                            ),
-                            SizedBox(height: 2),
-                            Text(
-                              'Auto connect and scan nearby batteries',
-                              style: TextStyle(
-                                fontSize: 12,
-                                color: Color(0xFF8C93A8),
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Auto Scan badge
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFE2FDF2),
-                            borderRadius: BorderRadius.circular(20),
-                            border: Border.all(color: const Color(0xFFDCFCE7), width: 1.5),
-                          ),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              const Text(
-                                'Auto Scan  ',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF8C93A8),
-                                ),
-                              ),
-                              Container(
-                                width: 5,
-                                height: 5,
-                                decoration: const BoxDecoration(
-                                  color: Color(0xFF22C55E),
-                                  shape: BoxShape.circle,
-                                ),
-                              ),
-                              const SizedBox(width: 4),
-                              const Text(
-                                'Active',
-                                style: TextStyle(
-                                  fontSize: 10,
-                                  fontWeight: FontWeight.bold,
-                                  color: Color(0xFF15803D),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 16),
+                    const SizedBox(height: 8),
 
                     // Radar & Scanner Stats Card
                     _buildScannerCard(
@@ -342,10 +387,6 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
                     ),
                     const SizedBox(height: 12),
 
-                    // Batch Connect Bar
-                    _buildBatchSelectBar(displayList, screenWidth),
-                    const SizedBox(height: 12),
-
                     // Batteries ListView
                     ListView.builder(
                       shrinkWrap: true,
@@ -353,8 +394,7 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
                       itemCount: displayList.length,
                       itemBuilder: (context, index) {
                         final battery = displayList[index];
-                        final isSelected = _selectedBatteryIds.contains(battery.id);
-                        return _buildBatteryRow(battery, isSelected);
+                        return _buildBatteryRow(battery);
                       },
                     ),
                     const SizedBox(height: 24),
@@ -364,7 +404,7 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
             ),
 
             // Bottom Actions Footer
-            _buildFooterActions(batteryState.isScanning, notifier, displayList),
+            _buildFooterActions(batteryState.isScanning, notifier),
           ],
         ),
       ),
@@ -419,6 +459,10 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
             IconButton(
               icon: const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF2E1C9F)),
               onPressed: () {
+                // Wipe memory and restart scan
+                setState(() {
+                  _autoConnectingIds.clear();
+                });
                 notifier.startScan();
               },
               constraints: const BoxConstraints(),
@@ -551,94 +595,7 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
     );
   }
 
-  Widget _buildBatchSelectBar(List<BatteryModel> batteries, double screenWidth) {
-    final bool isAllSelected = _selectedBatteryIds.length == batteries.length && batteries.isNotEmpty;
-    final bool isNarrow = screenWidth < 430;
-
-    final batchButton = ElevatedButton.icon(
-      onPressed: _selectedBatteryIds.isEmpty
-          ? null
-          : () {
-              for (var id in _selectedBatteryIds) {
-                final battery = batteries.firstWhere((b) => b.id == id);
-                if (battery.device != null) {
-                  ref.read(batteryProvider.notifier).connectToDevice(battery.device!);
-                }
-              }
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Connecting to ${_selectedBatteryIds.length} selected batteries')),
-              );
-            },
-      icon: const Icon(Icons.link_rounded, size: 12),
-      label: Text('Connect Selected (${_selectedBatteryIds.length})'),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2E1C9F),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
-        minimumSize: const Size(110, 38),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-        textStyle: const TextStyle(fontSize: 10.5, fontWeight: FontWeight.bold),
-      ),
-    );
-
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
-      ),
-      child: isNarrow
-          ? Column(
-              children: [
-                Row(
-                  children: [
-                    Checkbox(
-                      value: isAllSelected,
-                      activeColor: const Color(0xFF2E1C9F),
-                      onChanged: (val) => _toggleSelectAll(val, batteries),
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Select All (${batteries.length})',
-                      style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
-                    ),
-                    const Spacer(),
-                    Text(
-                      '${_selectedBatteryIds.length} Selected',
-                      style: const TextStyle(fontSize: 11, color: Color(0xFF8C93A8), fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                SizedBox(width: double.infinity, child: batchButton),
-              ],
-            )
-          : Row(
-              children: [
-                Checkbox(
-                  value: isAllSelected,
-                  activeColor: const Color(0xFF2E1C9F),
-                  onChanged: (val) => _toggleSelectAll(val, batteries),
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  'Select All (${batteries.length})',
-                  style: const TextStyle(fontSize: 11.5, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
-                ),
-                const Spacer(),
-                Text(
-                  '${_selectedBatteryIds.length} Selected',
-                  style: const TextStyle(fontSize: 11, color: Color(0xFF8C93A8), fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(width: 8),
-                batchButton,
-              ],
-            ),
-    );
-  }
-
-  Widget _buildBatteryRow(BatteryModel battery, bool isSelected) {
+  Widget _buildBatteryRow(BatteryModel battery) {
     Color fillStatusColor = const Color(0xFF22C55E);
     if (battery.soc < 30) {
       fillStatusColor = const Color(0xFFEF4444);
@@ -647,6 +604,7 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
     }
 
     final bool isConnected = battery.status == BatteryStatus.connected;
+    final bool isConnecting = _autoConnectingIds.contains(battery.id) && !isConnected;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 8),
@@ -655,140 +613,139 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
       ),
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
-      child: Row(
-        children: [
-          Checkbox(
-            value: isSelected,
-            activeColor: const Color(0xFF2E1C9F),
-            onChanged: (val) => _toggleSelectBattery(battery.id),
-          ),
-          const SizedBox(width: 2),
-          Expanded(
-            child: GestureDetector(
-              behavior: HitTestBehavior.opaque,
-              onTap: isConnected
-                  ? () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => BatteryDetailsDialog(battery: battery),
-                      );
-                    }
-                  : null,
-              child: Row(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 12),
+      child: GestureDetector(
+        behavior: HitTestBehavior.opaque,
+        onTap: isConnected
+            ? () {
+                showDialog(
+                  context: context,
+                  builder: (context) => BatteryDetailsDialog(battery: battery),
+                );
+              }
+            : null,
+        child: Row(
+          children: [
+            // Battery Graphic (vertical)
+            Container(
+              width: 28,
+              height: 42,
+              decoration: const BoxDecoration(color: Colors.transparent),
+              child: Stack(
+                alignment: Alignment.center,
                 children: [
-                  // Battery Graphic (vertical)
                   Container(
-                    width: 28,
-                    height: 42,
-                    decoration: const BoxDecoration(color: Colors.transparent),
-                    child: Stack(
-                      alignment: Alignment.center,
-                      children: [
-                        Container(
-                          width: 18,
-                          height: 32,
-                          decoration: BoxDecoration(
-                            color: const Color(0xFFF8F9FD),
-                            border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
-                            borderRadius: BorderRadius.circular(4),
-                          ),
-                        ),
-                        Positioned(
-                          top: 1,
-                          child: Container(
-                            width: 8,
-                            height: 3,
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF94A3B8),
-                              borderRadius: BorderRadius.only(topLeft: Radius.circular(1), topRight: Radius.circular(1)),
-                            ),
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 6,
-                          child: Container(
-                            width: 14,
-                            height: 22 * (battery.soc / 100),
-                            decoration: BoxDecoration(
-                              color: fillStatusColor,
-                              borderRadius: BorderRadius.circular(1),
-                            ),
-                          ),
-                        ),
-                      ],
+                    width: 18,
+                    height: 32,
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF8F9FD),
+                      border: Border.all(color: const Color(0xFFCBD5E1), width: 1.2),
+                      borderRadius: BorderRadius.circular(4),
                     ),
                   ),
-                  const SizedBox(width: 10),
-                  // Center device info
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              battery.name,
-                              style: const TextStyle(fontSize: 12.5, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
-                            ),
-                            const SizedBox(width: 4),
-                            GestureDetector(
-                              onTap: () => _showRenameDialog(context, battery),
-                              child: const Icon(Icons.edit_rounded, size: 12, color: Color(0xFF8C93A8)),
-                            ),
-                            const SizedBox(width: 6),
-                            if (isConnected)
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 5, vertical: 1.5),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE2FDF2),
-                                  borderRadius: BorderRadius.circular(6),
-                                  border: Border.all(color: const Color(0xFFDCFCE7), width: 0.8),
-                                ),
-                                child: Row(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Container(
-                                      width: 4,
-                                      height: 4,
-                                      decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
-                                    ),
-                                    const SizedBox(width: 4),
-                                    const Text(
-                                      'Connected',
-                                      style: TextStyle(fontSize: 8, color: Color(0xFF15803D), fontWeight: FontWeight.bold),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${battery.voltage.toStringAsFixed(1)}v  •  ${battery.temperature.toInt()}°C  •  RSSI: ${battery.rssi}dBm',
-                          style: const TextStyle(fontSize: 10.5, color: Color(0xFF8C93A8), fontWeight: FontWeight.w500),
-                        ),
-                      ],
+                  Positioned(
+                    top: 1,
+                    child: Container(
+                      width: 8,
+                      height: 3,
+                      decoration: const BoxDecoration(
+                        color: Color(0xFF94A3B8),
+                        borderRadius: BorderRadius.only(topLeft: Radius.circular(1), topRight: Radius.circular(1)),
+                      ),
                     ),
                   ),
-                  const SizedBox(width: 6),
-                  // Right status & button
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.end,
+                  Positioned(
+                    bottom: 6,
+                    child: Container(
+                      width: 14,
+                      height: 22 * (battery.soc / 100),
+                      decoration: BoxDecoration(
+                        color: fillStatusColor,
+                        borderRadius: BorderRadius.circular(1),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            
+            // Center device info
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
                     children: [
                       Text(
-                        '${battery.soc.toInt()}%',
-                        style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
+                        battery.name,
+                        style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
                       ),
-                      const SizedBox(height: 4),
+                      const SizedBox(width: 6),
+                      GestureDetector(
+                        onTap: () => _showRenameDialog(context, battery),
+                        child: const Icon(Icons.edit_rounded, size: 14, color: Color(0xFF8C93A8)),
+                      ),
+                      const SizedBox(width: 8),
                       if (isConnected)
-                        const Icon(Icons.chevron_right_rounded, size: 16, color: Color(0xFF8C93A8))
-                      else
-                        OutlinedButton(
-                          onPressed: () {
+                        Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE2FDF2),
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: const Color(0xFFDCFCE7), width: 0.8),
+                          ),
+                          child: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Container(
+                                width: 4,
+                                height: 4,
+                                decoration: const BoxDecoration(color: Color(0xFF22C55E), shape: BoxShape.circle),
+                              ),
+                              const SizedBox(width: 4),
+                              const Text(
+                                'Connected',
+                                style: TextStyle(fontSize: 9, color: Color(0xFF15803D), fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                        ),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    '${battery.voltage.toStringAsFixed(1)}v  •  ${battery.temperature.toInt()}°C  •  RSSI: ${battery.rssi}dBm',
+                    style: const TextStyle(fontSize: 11.5, color: Color(0xFF8C93A8), fontWeight: FontWeight.w500),
+                  ),
+                ],
+              ),
+            ),
+            
+            // Right status
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.end,
+              children: [
+                Text(
+                  '${battery.soc.toInt()}%',
+                  style: const TextStyle(fontSize: 15, fontWeight: FontWeight.bold, color: Color(0xFF151833)),
+                ),
+                const SizedBox(height: 4),
+                if (isConnected)
+                  const Icon(Icons.chevron_right_rounded, size: 18, color: Color(0xFF8C93A8))
+                else
+                  // Smart Retry/Connecting button
+                  OutlinedButton(
+                    onPressed: isConnecting 
+                        ? null // Disabled while trying
+                        : () {
+                            setState(() {
+                              _autoConnectingIds.add(battery.id);
+                            });
                             if (battery.device != null) {
                               ref.read(batteryProvider.notifier).connectToDevice(battery.device!);
                             } else {
+                              // Fallback simulated connection
                               ref.read(batteryProvider.notifier).addSimulatedBattery(
                                 battery.name.replaceAll('BGS', 'BOS'),
                                 battery.soc,
@@ -796,94 +753,64 @@ class _BatteryScanTabState extends ConsumerState<BatteryScanTab>
                               );
                             }
                           },
-                          style: OutlinedButton.styleFrom(
-                            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
-                            minimumSize: const Size(54, 22),
-                            side: const BorderSide(color: Color(0xFF2E1C9F)),
-                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
-                          ),
-                          child: const Text(
-                            'Connect',
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF2E1C9F)),
-                          ),
-                        ),
-                    ],
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 2),
+                      minimumSize: const Size(54, 22),
+                      side: BorderSide(color: isConnecting ? const Color(0xFFCBD5E1) : const Color(0xFF2E1C9F)),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+                    ),
+                    child: Text(
+                      isConnecting ? 'Connecting...' : 'Retry',
+                      style: TextStyle(
+                        fontSize: 9, 
+                        fontWeight: FontWeight.bold, 
+                        color: isConnecting ? const Color(0xFF94A3B8) : const Color(0xFF2E1C9F),
+                      ),
+                    ),
                   ),
-                ],
-              ),
+              ],
             ),
-          ),
-        ],
+          ],
+        ),
       ),
     );
   }
 
-  Widget _buildFooterActions(
-    bool isScanning,
-    BatteryNotifier notifier,
-    List<BatteryModel> batteries,
-  ) {
+  Widget _buildFooterActions(bool isScanning, BatteryNotifier notifier) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      width: double.infinity,
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 16.0),
       decoration: const BoxDecoration(
         color: Colors.white,
         border: Border(top: BorderSide(color: Color(0xFFF1F5F9), width: 1.5)),
       ),
-      child: Row(
-        children: [
-          // Scan Trigger Button
-          Expanded(
-            child: isScanning
-                ? OutlinedButton.icon(
-                    onPressed: () => notifier.stopScan(),
-                    icon: const Icon(Icons.stop_rounded, size: 16, color: Color(0xFFEF4444)),
-                    label: const Text('Stop Scan', style: TextStyle(color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
-                    style: OutlinedButton.styleFrom(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  )
-                : ElevatedButton.icon(
-                    onPressed: () => notifier.startScan(),
-                    icon: const Icon(Icons.play_arrow_rounded, size: 16, color: Colors.white),
-                    label: const Text('Start Scan', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF22C55E),
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    ),
-                  ),
-          ),
-          const SizedBox(width: 12),
-          // Batch connect Selected Button
-          Expanded(
-            child: ElevatedButton.icon(
-              onPressed: _selectedBatteryIds.isEmpty
-                  ? null
-                  : () {
-                      for (var id in _selectedBatteryIds) {
-                        final battery = batteries.firstWhere((b) => b.id == id);
-                        if (battery.device != null) {
-                          notifier.connectToDevice(battery.device!);
-                        }
-                      }
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Connecting to ${_selectedBatteryIds.length} selected batteries')),
-                      );
-                    },
-              icon: const Icon(Icons.link_rounded, size: 16, color: Colors.white),
-              label: Text('Connect (${_selectedBatteryIds.length})', style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+      child: isScanning
+          ? OutlinedButton.icon(
+              onPressed: () => notifier.stopScan(),
+              icon: const Icon(Icons.stop_rounded, size: 20, color: Color(0xFFEF4444)),
+              label: const Text('Stop Auto-Scan', style: TextStyle(fontSize: 15, color: Color(0xFFEF4444), fontWeight: FontWeight.bold)),
+              style: OutlinedButton.styleFrom(
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                side: const BorderSide(color: Color(0xFFEF4444), width: 1.5),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              ),
+            )
+          : ElevatedButton.icon(
+              onPressed: () {
+                // Wipe memory before restarting
+                setState(() {
+                  _autoConnectingIds.clear();
+                });
+                notifier.startScan();
+              },
+              icon: const Icon(Icons.sensors_rounded, size: 20, color: Colors.white),
+              label: const Text('Start Auto-Scan', style: TextStyle(fontSize: 15, color: Colors.white, fontWeight: FontWeight.bold)),
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2E1C9F),
-                padding: const EdgeInsets.symmetric(vertical: 12),
-                disabledBackgroundColor: const Color(0xFFE2E8F0),
+                backgroundColor: const Color(0xFF2E1C9F), 
+                padding: const EdgeInsets.symmetric(vertical: 14),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -900,7 +827,7 @@ class RadarSweepPainter extends CustomPainter {
     final maxRadius = min(size.width, size.height) / 2;
 
     final Paint paintCircle = Paint()
-      ..color = const Color(0xFFCCFF00).withOpacity(0.06) // Lime green pulse lines
+      ..color = const Color(0xFFCCFF00).withOpacity(0.06)
       ..style = PaintingStyle.stroke
       ..strokeWidth = 1.2;
 
@@ -909,17 +836,15 @@ class RadarSweepPainter extends CustomPainter {
     canvas.drawCircle(center, maxRadius * 0.50, paintCircle);
     canvas.drawCircle(center, maxRadius * 0.25, paintCircle);
 
-    // Draw sweeps
     final Paint sweepPaint = Paint()
-      ..color = const Color(0xFFCCFF00).withOpacity(0.12) // Neon lime green sweep
+      ..color = const Color(0xFFCCFF00).withOpacity(0.12)
       ..style = PaintingStyle.fill;
 
-    const sweepAngle = pi / 5; // 36-degree wedge
+    const sweepAngle = pi / 5;
     final start = angle - sweepAngle / 2;
     final rect = Rect.fromCircle(center: center, radius: maxRadius);
     canvas.drawArc(rect, start, sweepAngle, true, sweepPaint);
 
-    // Center glow
     final Paint glowPaint = Paint()
       ..shader = RadialGradient(
         colors: [

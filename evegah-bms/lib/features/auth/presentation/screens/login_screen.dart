@@ -12,17 +12,39 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final TextEditingController mobileController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
+  
+  // Focus nodes to manage input highlight states
+  late FocusNode phoneFocusNode;
+  late FocusNode passwordFocusNode;
+
   bool _isPasswordVisible = false;
-  bool _rememberMe = false;
+
+  @override
+  void initState() {
+    super.initState();
+    phoneFocusNode = FocusNode();
+    passwordFocusNode = FocusNode();
+
+    // Add listeners so the UI automatically updates when you tap in OR tap out
+    phoneFocusNode.addListener(() {
+      setState(() {});
+    });
+    passwordFocusNode.addListener(() {
+      setState(() {});
+    });
+  }
 
   @override
   void dispose() {
     mobileController.dispose();
     passwordController.dispose();
+    phoneFocusNode.dispose();
+    passwordFocusNode.dispose();
     super.dispose();
   }
 
   void _onContinuePressed() {
+    FocusScope.of(context).unfocus(); // Dismiss keyboard on submit
     debugPrint('===== LOGIN BUTTON CLICKED =====');
 
     final mobile = mobileController.text.trim();
@@ -60,10 +82,15 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Determine if phone field is currently focused
+    final isPhoneFocused = phoneFocusNode.hasFocus;
+
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FD), // Soft premium backdrop
       body: SafeArea(
         child: SingleChildScrollView(
+          // Ensures smooth scrolling when keyboard pops up
+          padding: EdgeInsets.only(bottom: MediaQuery.of(context).viewInsets.bottom),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -184,9 +211,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   boxShadow: [
                     BoxShadow(
-                      color: Colors.black.withOpacity(0.02),
-                      blurRadius: 10,
-                      offset: const Offset(0, -4),
+                      color: Colors.black.withOpacity(0.03), // Softer shadow
+                      blurRadius: 15,
+                      offset: const Offset(0, -5),
                     ),
                   ],
                 ),
@@ -204,13 +231,17 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                     const SizedBox(height: 8),
-
-                    // Phone custom input container
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+// Phone custom input container (with focus highlighting)
+                    AnimatedContainer(
+                      duration: const Duration(milliseconds: 200),
+                      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 2), // Adjusted vertical padding
                       decoration: BoxDecoration(
                         color: Colors.white,
-                        border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+                        // This is the OUTER box border. We keep this one!
+                        border: Border.all(
+                          color: isPhoneFocused ? const Color(0xFF2E1C9F) : const Color(0xFFF1F5F9), 
+                          width: 1.5
+                        ),
                         borderRadius: BorderRadius.circular(14),
                       ),
                       child: Row(
@@ -228,12 +259,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               color: Color(0xFF151833),
                             ),
                           ),
-                          const SizedBox(width: 4),
-                          const Icon(
-                            Icons.keyboard_arrow_down_rounded,
-                            size: 16,
-                            color: Color(0xFF8C93A8),
-                          ),
+                          
                           Container(
                             height: 18,
                             width: 1.5,
@@ -243,8 +269,10 @@ class _LoginScreenState extends State<LoginScreen> {
                           Expanded(
                             child: TextField(
                               controller: mobileController,
+                              focusNode: phoneFocusNode,
                               keyboardType: TextInputType.phone,
                               maxLength: 10,
+                              onEditingComplete: () => FocusScope.of(context).requestFocus(passwordFocusNode),
                               style: const TextStyle(
                                 fontSize: 14,
                                 color: Color(0xFF151833),
@@ -252,7 +280,7 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               decoration: const InputDecoration(
                                 isDense: true,
-                                contentPadding: EdgeInsets.zero,
+                                contentPadding: EdgeInsets.symmetric(vertical: 12),
                                 hintText: 'Enter phone number',
                                 hintStyle: TextStyle(
                                   color: Color(0xFF8C93A8),
@@ -260,7 +288,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                   fontWeight: FontWeight.w400,
                                 ),
                                 counterText: '',
+                                // THIS REMOVES THE INNER BOX COMPLETELY
                                 border: InputBorder.none,
+                                enabledBorder: InputBorder.none,
+                                focusedBorder: InputBorder.none,
+                                disabledBorder: InputBorder.none,
+                                errorBorder: InputBorder.none,
                               ),
                             ),
                           ),
@@ -281,8 +314,11 @@ class _LoginScreenState extends State<LoginScreen> {
                             color: Color(0xFF151833),
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {},
+                        InkWell(
+                          onTap: () {
+                            // Forgot Password logic
+                          },
+                          borderRadius: BorderRadius.circular(4),
                           child: const Text(
                             'Forgot Password?',
                             style: TextStyle(
@@ -299,6 +335,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     // Password input field
                     TextField(
                       controller: passwordController,
+                      focusNode: passwordFocusNode,
                       obscureText: !_isPasswordVisible,
                       style: const TextStyle(
                         fontSize: 14,
@@ -307,7 +344,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                       decoration: InputDecoration(
                         isDense: true,
-                        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                        contentPadding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
                         prefixIcon: const Icon(Icons.lock_outline_rounded, size: 20, color: Color(0xFF8C93A8)),
                         suffixIcon: IconButton(
                           icon: Icon(
@@ -341,39 +378,9 @@ class _LoginScreenState extends State<LoginScreen> {
                         ),
                       ),
                     ),
-                    const SizedBox(height: 16),
-
-                    // Remember Me Checkbox Row
-                    Row(
-                      children: [
-                        SizedBox(
-                          height: 24,
-                          width: 24,
-                          child: Checkbox(
-                            value: _rememberMe,
-                            activeColor: const Color(0xFF2E1C9F),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(4),
-                            ),
-                            onChanged: (val) {
-                              setState(() {
-                                _rememberMe = val ?? false;
-                              });
-                            },
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        const Text(
-                          'Remember me',
-                          style: TextStyle(
-                            color: Color(0xFF8C93A8),
-                            fontSize: 12,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 24),
+                    
+                    // Increased spacing here to replace the removed checkbox
+                    const SizedBox(height: 32),
 
                     // Login Button (Indigo Gradient)
                     Container(
@@ -409,6 +416,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.bold,
+                            letterSpacing: 0.5,
                           ),
                         ),
                       ),
@@ -417,9 +425,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
                     // Divider: "or continue with"
                     Row(
-                      children: [
-                        const Expanded(child: Divider(color: Color(0xFFF1F5F9), thickness: 1.5)),
-                        const Padding(
+                      children: const [
+                        Expanded(child: Divider(color: Color(0xFFF1F5F9), thickness: 1.5)),
+                        Padding(
                           padding: EdgeInsets.symmetric(horizontal: 12),
                           child: Text(
                             'or continue with',
@@ -430,7 +438,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             ),
                           ),
                         ),
-                        const Expanded(child: Divider(color: Color(0xFFF1F5F9), thickness: 1.5)),
+                        Expanded(child: Divider(color: Color(0xFFF1F5F9), thickness: 1.5)),
                       ],
                     ),
                     const SizedBox(height: 20),
@@ -445,6 +453,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             size: 28,
                           ),
                           label: 'Google',
+                          onTap: () {},
                         ),
                         const SizedBox(width: 8),
                         _buildSocialBtn(
@@ -454,6 +463,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             size: 20,
                           ),
                           label: 'Apple',
+                          onTap: () {},
                         ),
                         const SizedBox(width: 8),
                         _buildSocialBtn(
@@ -463,6 +473,7 @@ class _LoginScreenState extends State<LoginScreen> {
                             size: 16,
                           ),
                           label: 'Phone OTP',
+                          onTap: () {},
                         ),
                       ],
                     ),
@@ -480,14 +491,20 @@ class _LoginScreenState extends State<LoginScreen> {
                             fontWeight: FontWeight.w500,
                           ),
                         ),
-                        GestureDetector(
-                          onTap: () {},
-                          child: const Text(
-                            'Sign Up',
-                            style: TextStyle(
-                              color: Color(0xFF2E1C9F),
-                              fontWeight: FontWeight.bold,
-                              fontSize: 12,
+                        InkWell(
+                          onTap: () {
+                            // Go to sign up
+                          },
+                          borderRadius: BorderRadius.circular(4),
+                          child: const Padding(
+                            padding: EdgeInsets.all(4.0),
+                            child: Text(
+                              'Sign Up',
+                              style: TextStyle(
+                                color: Color(0xFF2E1C9F),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                         ),
@@ -503,29 +520,41 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
-  Widget _buildSocialBtn({required Widget logo, required String label}) {
+  // Refactored Social Button to include beautiful touch ripples
+  Widget _buildSocialBtn({
+    required Widget logo,
+    required String label,
+    required VoidCallback onTap,
+  }) {
     return Expanded(
-      child: Container(
-        height: 46,
-        decoration: BoxDecoration(
-          color: Colors.white,
-          border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+      child: Material(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(12),
+        child: InkWell(
+          onTap: onTap,
           borderRadius: BorderRadius.circular(12),
-        ),
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            logo,
-            const SizedBox(width: 4),
-            Text(
-              label,
-              style: const TextStyle(
-                color: Color(0xFF151833),
-                fontSize: 10.5,
-                fontWeight: FontWeight.bold,
-              ),
+          child: Container(
+            height: 46,
+            decoration: BoxDecoration(
+              border: Border.all(color: const Color(0xFFF1F5F9), width: 1.5),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ],
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                logo,
+                const SizedBox(width: 4),
+                Text(
+                  label,
+                  style: const TextStyle(
+                    color: Color(0xFF151833),
+                    fontSize: 10.5,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+          ),
         ),
       ),
     );
