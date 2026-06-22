@@ -1,13 +1,21 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'vehicle_animated_screen.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/services/session_service.dart';
 
 class OtpScreen extends StatefulWidget {
   final AuthService authService;
+  final String phoneNumber;
+  final bool isExistingUser;
 
-  const OtpScreen({super.key, required this.authService});
+  const OtpScreen({
+    super.key, 
+    required this.authService,
+    required this.phoneNumber,
+    required this.isExistingUser,
+  });
 
   @override
   State<OtpScreen> createState() => _OtpScreenState();
@@ -30,6 +38,9 @@ class _OtpScreenState extends State<OtpScreen> {
     startTimer();
     for (int i = 0; i < 4; i++) {
       _controllers[i].addListener(_checkOtpCompletion);
+      _focusNodes[i].addListener(() {
+        if (mounted) setState(() {});
+      });
     }
   }
 
@@ -77,17 +88,18 @@ class _OtpScreenState extends State<OtpScreen> {
       errorMessage = "";
     });
 
-    // Mock OTP verification flow
-    await Future.delayed(const Duration(milliseconds: 1000));
-    bool verified = otp == "1234";
+    bool verified = widget.authService.verifyOtp(otp);
 
     if (verified) {
+      debugPrint("🚨 THE ID CARD I AM HANDING THE WALLET IS: '${widget.authService.accessToken}'");
       await sessionService.saveToken(widget.authService.accessToken);
       if (mounted) {
         Navigator.pushReplacement(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => const VehicleAnimatedScreen(),
+            pageBuilder: (context, animation, secondaryAnimation) => VehicleAnimatedScreen(
+              isExistingUser: widget.isExistingUser,
+            ),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },
@@ -175,31 +187,45 @@ class _OtpScreenState extends State<OtpScreen> {
                                 width: _focusNodes[index].hasFocus ? 2.0 : 1.0,
                               ),
                             ),
-                            child: TextField(
-                              controller: _controllers[index],
-                              focusNode: _focusNodes[index],
-                              keyboardType: TextInputType.number,
-                              textAlign: TextAlign.center,
-                              maxLength: 1,
-                              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F0933)),
-                              decoration: const InputDecoration(
-                                counterText: "",
-                                border: InputBorder.none,
-                              ),
-                              onChanged: (val) {
-                                if (val.isNotEmpty) {
-                                  if (index < 3) {
-                                    _focusNodes[index + 1].requestFocus();
-                                  } else {
-                                    _focusNodes[index].unfocus();
-                                    verifyOtp(); // Auto-verify on last digit
-                                  }
-                                } else {
-                                  if (index > 0) {
-                                    _focusNodes[index - 1].requestFocus();
+                            child: Focus(
+                              onKeyEvent: (node, event) {
+                                if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.backspace) {
+                                  if (_controllers[index].text.isEmpty && index > 0) {
+                                    FocusScope.of(context).requestFocus(_focusNodes[index - 1]);
+                                    return KeyEventResult.handled;
                                   }
                                 }
+                                return KeyEventResult.ignored;
                               },
+                              child: TextField(
+                                controller: _controllers[index],
+                                focusNode: _focusNodes[index],
+                                keyboardType: TextInputType.number,
+                                textAlign: TextAlign.center,
+                                maxLength: 1,
+                                inputFormatters: [
+                                  FilteringTextInputFormatter.digitsOnly,
+                                ],
+                                style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: Color(0xFF0F0933)),
+                                decoration: const InputDecoration(
+                                  counterText: "",
+                                  border: InputBorder.none,
+                                ),
+                                onChanged: (val) {
+                                  if (val.isNotEmpty) {
+                                    if (index < 3) {
+                                      _focusNodes[index + 1].requestFocus();
+                                    } else {
+                                      _focusNodes[index].unfocus();
+                                      verifyOtp(); // Auto-verify on last digit
+                                    }
+                                  } else {
+                                    if (index > 0) {
+                                      _focusNodes[index - 1].requestFocus();
+                                    }
+                                  }
+                                },
+                              ),
                             ),
                           );
                         }),
@@ -229,7 +255,7 @@ class _OtpScreenState extends State<OtpScreen> {
                         child: seconds == 0
                             ? TextButton.icon(
                                 onPressed: () async {
-                                  await widget.authService.sendOtp("");
+                                  await widget.authService.sendOtp(widget.phoneNumber.isNotEmpty ? widget.phoneNumber : "");
                                   startTimer();
                                 },
                                 icon: const Icon(Icons.refresh_rounded, size: 16, color: Color(0xFF4313B8)),

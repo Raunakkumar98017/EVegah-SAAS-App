@@ -19,7 +19,7 @@ class _SuccessScreenState extends State<SuccessScreen> {
     Timer(const Duration(seconds: 1), () {
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const VehicleAnimatedScreen()),
+        MaterialPageRoute(builder: (context) => const VehicleAnimatedScreen(isExistingUser: true)),
       );
     });
   }

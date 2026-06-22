@@ -176,9 +176,9 @@ class RiderDashboardScreen extends StatelessWidget {
           return Expanded(
             child: Column(
               children: [
-                Text(k[0] as String, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                Text(k[0], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
                 const SizedBox(height: 6),
-                Text(k[1] as String, style: AppTextStyles.bodySmall, textAlign: TextAlign.center),
+                Text(k[1], style: AppTextStyles.bodySmall, textAlign: TextAlign.center),
               ],
             ),
           );

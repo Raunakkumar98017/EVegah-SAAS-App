@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../../core/widgets/evegah_logo.dart';
 import '../../data/services/profile_service.dart';
 import 'basic_profile_screen.dart';
 import '../../../offers/presentation/screens/offer_screen.dart';
@@ -54,15 +55,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     // spacer to align center
                     const SizedBox(width: 48),
                     // evegah logo
-                    const Text(
-                      "evegah",
-                      style: TextStyle(
-                        color: Color(0xFF4313B8),
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
+                    const EvegahLogo(),
                     // Bell & Profile
                     Row(
                       children: [

@@ -1,7 +1,9 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:razorpay_flutter/razorpay_flutter.dart';
 import '../../data/services/wallet_service.dart';
 import '../../../offers/presentation/screens/offer_screen.dart';
+import '../../../../core/widgets/evegah_logo.dart';
 
 class WalletScreen extends StatefulWidget {
   const WalletScreen({super.key});
@@ -14,7 +16,7 @@ class _WalletScreenState extends State<WalletScreen> {
   final WalletService _walletService = WalletService();
   final TextEditingController _amountController = TextEditingController();
 
-  late Razorpay _razorpay;
+  Razorpay? _razorpay;
   bool isProcessingPayment = false;
   bool _showBalance = true;
 
@@ -28,7 +30,7 @@ class _WalletScreenState extends State<WalletScreen> {
       "title": "Ride Payment",
       "subtitle": "E-Scooter • Lekki Phase 1",
       "date": "Today, 09:20 AM",
-      "amount": "- ₦250.00",
+      "amount": "- ₹250.00",
       "isCredit": false,
       "type": "scooter"
     },
@@ -36,7 +38,7 @@ class _WalletScreenState extends State<WalletScreen> {
       "title": "Money Added",
       "subtitle": "From Access Bank •••• 5678",
       "date": "Today, 08:45 AM",
-      "amount": "+ ₦1,000.00",
+      "amount": "+ ₹1,000.00",
       "isCredit": true,
       "type": "wallet"
     },
@@ -44,7 +46,7 @@ class _WalletScreenState extends State<WalletScreen> {
       "title": "Ride Payment",
       "subtitle": "E-Bike • Chevron Drive",
       "date": "Yesterday, 06:15 PM",
-      "amount": "- ₦400.00",
+      "amount": "- ₹400.00",
       "isCredit": false,
       "type": "bike"
     },
@@ -52,7 +54,7 @@ class _WalletScreenState extends State<WalletScreen> {
       "title": "Bonus Received",
       "subtitle": "Welcome Bonus",
       "date": "Yesterday, 10:30 AM",
-      "amount": "+ ₦150.00",
+      "amount": "+ ₹150.00",
       "isCredit": true,
       "type": "bonus"
     },
@@ -60,7 +62,7 @@ class _WalletScreenState extends State<WalletScreen> {
       "title": "Ride Payment",
       "subtitle": "E-Scooter Pro • Lekki Phase 1",
       "date": "May 12, 07:40 PM",
-      "amount": "- ₦300.00",
+      "amount": "- ₹300.00",
       "isCredit": false,
       "type": "scooter"
     }
@@ -69,10 +71,12 @@ class _WalletScreenState extends State<WalletScreen> {
   @override
   void initState() {
     super.initState();
-    _razorpay = Razorpay();
-    _razorpay.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
-    _razorpay.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
-    _razorpay.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    if (!kIsWeb) {
+      _razorpay = Razorpay();
+      _razorpay!.on(Razorpay.EVENT_PAYMENT_SUCCESS, _handlePaymentSuccess);
+      _razorpay!.on(Razorpay.EVENT_PAYMENT_ERROR, _handlePaymentError);
+      _razorpay!.on(Razorpay.EVENT_EXTERNAL_WALLET, _handleExternalWallet);
+    }
 
     _loadWalletData();
   }
@@ -96,7 +100,7 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   void dispose() {
-    _razorpay.clear();
+    _razorpay?.clear();
     _amountController.dispose();
     super.dispose();
   }
@@ -149,7 +153,16 @@ class _WalletScreenState extends State<WalletScreen> {
     };
 
     try {
-      _razorpay.open(options);
+      if (kIsWeb) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Payments are not supported on Web. Please use the mobile app."), backgroundColor: Colors.orange),
+          );
+        }
+        setState(() => isProcessingPayment = false);
+        return;
+      }
+      _razorpay?.open(options);
     } catch (e) {
       setState(() => isProcessingPayment = false);
     }
@@ -179,7 +192,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     controller: _amountController,
                     keyboardType: TextInputType.number,
                     decoration: InputDecoration(
-                      prefixText: "₦ ",
+                      prefixText: "₹ ",
                       hintText: "Enter amount",
                       border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
                     ),
@@ -201,7 +214,7 @@ class _WalletScreenState extends State<WalletScreen> {
                             border: Border.all(color: const Color(0xFFDDD6FE)),
                           ),
                           child: Text(
-                            "₦$amount",
+                            "₹$amount",
                             style: const TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold),
                           ),
                         ),
@@ -258,6 +271,7 @@ class _WalletScreenState extends State<WalletScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint("Wallet build started");
     return Scaffold(
       backgroundColor: const Color(0xFFFAFBFE),
       body: SafeArea(
@@ -274,15 +288,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     // Hamburger Menu
                     const Icon(Icons.menu_rounded, color: Colors.black, size: 24),
                     // evegah logo
-                    const Text(
-                      "evegah",
-                      style: TextStyle(
-                        color: Color(0xFF4313B8),
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        letterSpacing: -0.5,
-                      ),
-                    ),
+                    const EvegahLogo(),
                     // Bell & Profile
                     Row(
                       children: [
@@ -368,7 +374,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           Row(
                             children: [
                               Text(
-                                _showBalance ? "₦${_walletBalance.toStringAsFixed(2)}" : "₦••••••",
+                                _showBalance ? "₹${_walletBalance.toStringAsFixed(2)}" : "₹••••••",
                                 style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
                               ),
                               const SizedBox(width: 12),
@@ -396,7 +402,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                 const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 12),
                                 const SizedBox(width: 4),
                                 Text(
-                                  "Bonus Balance: ₦${_bonusBalance.toStringAsFixed(2)}",
+                                  "Bonus Balance: ₹${_bonusBalance.toStringAsFixed(2)}",
                                   style: const TextStyle(color: Colors.white, fontSize: 9, fontWeight: FontWeight.bold),
                                 ),
                               ],
@@ -704,6 +710,8 @@ class _WalletScreenState extends State<WalletScreen> {
               Text(
                 label,
                 textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
                 style: const TextStyle(
                   fontSize: 8,
                   fontWeight: FontWeight.bold,

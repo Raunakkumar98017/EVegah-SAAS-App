@@ -439,17 +439,22 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const Divider(color: Color(0xFFF1F5F9), height: 1),
                             const SizedBox(height: 8),
                             Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Row(
-                                  children: const [
-                                    Icon(Icons.stars_rounded, color: Colors.amber, size: 14),
-                                    SizedBox(width: 4),
-                                    Text(
-                                      "Evegah Coins",
-                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
-                                    ),
-                                  ],
+                                Expanded(
+                                  child: Row(
+                                    children: const [
+                                      Icon(Icons.stars_rounded, color: Colors.amber, size: 14),
+                                      SizedBox(width: 4),
+                                      Flexible(
+                                        child: Text(
+                                          "Evegah Coins",
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis,
+                                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
                                 ),
                                 Row(
                                   children: const [

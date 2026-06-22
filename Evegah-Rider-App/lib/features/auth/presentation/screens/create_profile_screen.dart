@@ -423,12 +423,15 @@ class _CreateProfileScreenState extends State<CreateProfileScreen> {
                     child: ElevatedButton(
                       onPressed: () {
                         if (validateFields()) {
-                          Navigator.pushReplacement(
+                          // 1. Save user session (Session token is already saved in OtpScreen)
+                          // 2. Save profile (API integration would go here)
+                          Navigator.pushAndRemoveUntil(
                             context,
 
                             MaterialPageRoute(
                               builder: (context) => const MainNavigation(),
                             ),
+                            (Route<dynamic> route) => false,
                           );
                         }
                       },

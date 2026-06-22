@@ -382,9 +382,13 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> with SingleTicker
                   children: [
                     Row(
                       children: [
-                        Text(
-                          vehicleName,
-                          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                        Flexible(
+                          child: Text(
+                            vehicleName,
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                            style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF1E293B)),
+                          ),
                         ),
                         const SizedBox(width: 8),
                         Container(

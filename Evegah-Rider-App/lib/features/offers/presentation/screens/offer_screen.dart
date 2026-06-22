@@ -1,6 +1,7 @@
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../core/widgets/evegah_logo.dart';
 
 class OfferScreen extends StatefulWidget {
   const OfferScreen({super.key});
@@ -16,7 +17,7 @@ class _OfferScreenState extends State<OfferScreen> {
   final List<Map<String, dynamic>> _availableOffers = [
     {
       "code": "EVE50",
-      "title": "50% OFF up to ₦500",
+      "title": "50% OFF up to ₹500",
       "subtitle": "Valid on all rides",
       "expiry": "Valid till 31 May 2025",
       "isBest": true,
@@ -26,7 +27,7 @@ class _OfferScreenState extends State<OfferScreen> {
     {
       "code": "SCOOT20",
       "title": "20% OFF on E-Scooters",
-      "subtitle": "Maximum discount of ₦200",
+      "subtitle": "Maximum discount of ₹200",
       "expiry": "Valid till 25 May 2025",
       "isBest": false,
       "category": "Scooter",
@@ -35,7 +36,7 @@ class _OfferScreenState extends State<OfferScreen> {
     {
       "code": "BIKE15",
       "title": "15% OFF on E-Bikes",
-      "subtitle": "Maximum discount of ₦150",
+      "subtitle": "Maximum discount of ₹150",
       "expiry": "Valid till 30 May 2025",
       "isBest": false,
       "category": "Bike",
@@ -44,7 +45,7 @@ class _OfferScreenState extends State<OfferScreen> {
     {
       "code": "WALLET150",
       "title": "Add money, get more!",
-      "subtitle": "Add ₦2,000 or more and get ₦150 bonus",
+      "subtitle": "Add ₹2,000 or more and get ₹150 bonus",
       "expiry": "Valid till 31 May 2025",
       "isBest": false,
       "category": "Wallet",
@@ -53,7 +54,7 @@ class _OfferScreenState extends State<OfferScreen> {
     {
       "code": "CAR10",
       "title": "10% OFF on Cars",
-      "subtitle": "Maximum discount of ₦300",
+      "subtitle": "Maximum discount of ₹300",
       "expiry": "Valid till 15 Jun 2025",
       "isBest": false,
       "category": "Car",
@@ -64,7 +65,7 @@ class _OfferScreenState extends State<OfferScreen> {
   final List<Map<String, dynamic>> _myOffers = [
     {
       "code": "WELCOME100",
-      "title": "Welcome Discount ₦100 OFF",
+      "title": "Welcome Discount ₹100 OFF",
       "subtitle": "Valid on first 3 rides",
       "expiry": "Valid till 30 Jun 2025",
       "isBest": false,
@@ -73,7 +74,7 @@ class _OfferScreenState extends State<OfferScreen> {
     },
     {
       "code": "RIDER50",
-      "title": "₦50 OFF on Any Ride",
+      "title": "₹50 OFF on Any Ride",
       "subtitle": "No minimum ride fare",
       "expiry": "Valid till 10 Jul 2025",
       "isBest": false,
@@ -129,15 +130,7 @@ class _OfferScreenState extends State<OfferScreen> {
                     ),
                   ),
                   // evegah logo
-                  const Text(
-                    "evegah",
-                    style: TextStyle(
-                      color: Color(0xFF4313B8),
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
+                  const EvegahLogo(),
                   // Bell & Profile
                   Row(
                     children: [
@@ -665,7 +658,7 @@ class DashedRectPainter extends CustomPainter {
         const Radius.circular(6),
       ));
 
-    for (PathMetric pathMetric in path.computeMetrics()) {
+    for (ui.PathMetric pathMetric in path.computeMetrics()) {
       double distance = 0.0;
       while (distance < pathMetric.length) {
         final double length = gap;

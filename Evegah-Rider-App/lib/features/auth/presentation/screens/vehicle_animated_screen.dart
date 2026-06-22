@@ -1,9 +1,15 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'create_profile_screen.dart';
+import '../../../dashboard/presentation/screens/main_navigation.dart';
 
 class VehicleAnimatedScreen extends StatefulWidget {
-  const VehicleAnimatedScreen({super.key});
+  final bool isExistingUser;
+
+  const VehicleAnimatedScreen({
+    super.key,
+    required this.isExistingUser,
+  });
 
   @override
   State<VehicleAnimatedScreen> createState() => _VehicleAnimatedScreenState();
@@ -86,15 +92,18 @@ class _VehicleAnimatedScreenState extends State<VehicleAnimatedScreen> with Tick
     // Schedule navigation transition
     _exitTimer = Timer(const Duration(milliseconds: 2800), () {
       if (mounted) {
-        Navigator.pushReplacement(
+        Navigator.pushAndRemoveUntil(
           context,
           PageRouteBuilder(
-            pageBuilder: (context, animation, secondaryAnimation) => const CreateProfileScreen(),
+            pageBuilder: (context, animation, secondaryAnimation) => widget.isExistingUser 
+                ? const MainNavigation() 
+                : const CreateProfileScreen(),
             transitionsBuilder: (context, animation, secondaryAnimation, child) {
               return FadeTransition(opacity: animation, child: child);
             },
             transitionDuration: const Duration(milliseconds: 500),
           ),
+          (route) => false,
         );
       }
     });
