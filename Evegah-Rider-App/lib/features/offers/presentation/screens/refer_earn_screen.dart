@@ -1,6 +1,7 @@
-import 'dart:ui';
+import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import '../../../../core/widgets/evegah_logo.dart';
 
 class ReferEarnScreen extends StatefulWidget {
   const ReferEarnScreen({super.key});
@@ -48,15 +49,7 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                       child: const Icon(Icons.arrow_back_rounded, color: Colors.black, size: 20),
                     ),
                   ),
-                  const Text(
-                    "evegah",
-                    style: TextStyle(
-                      color: Color(0xFF4313B8),
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
+                  const EvegahLogo(),
                   Row(
                     children: [
                       Stack(
@@ -530,7 +523,7 @@ class DashedRectPainter extends CustomPainter {
         const Radius.circular(12),
       ));
 
-    for (PathMetric pathMetric in path.computeMetrics()) {
+    for (ui.PathMetric pathMetric in path.computeMetrics()) {
       double distance = 0.0;
       while (distance < pathMetric.length) {
         final double length = gap;

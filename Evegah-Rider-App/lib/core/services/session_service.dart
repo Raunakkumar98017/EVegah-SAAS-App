@@ -1,8 +1,13 @@
+import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class SessionService {
   // SAVE TOKEN
-  Future<void> saveToken(String token) async {
+  Future<void> saveToken(String? token) async {
+    if (token == null || token.trim().isEmpty) {
+      debugPrint("⚠️ ATTEMPTED TO SAVE EMPTY TOKEN. IGNORING.");
+      return;
+    }
     SharedPreferences prefs = await SharedPreferences.getInstance();
 
     await prefs.setString("access_token", token);
@@ -25,7 +30,7 @@ class SessionService {
 
     int? loginTime = prefs.getInt("login_time");
 
-    if (token == null || loginTime == null) {
+    if (token == null || token.trim().isEmpty || loginTime == null) {
       return false;
     }
 

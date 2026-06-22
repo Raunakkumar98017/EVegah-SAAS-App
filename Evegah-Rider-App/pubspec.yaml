@@ -57,6 +57,7 @@ dependencies:
 
   # DEVICE INFO
   device_info_plus: ^12.4.0
+  flutter_dotenv: ^6.0.1
 
 dev_dependencies:
   flutter_test:
@@ -69,3 +70,4 @@ flutter:
 
   assets:
     - assets/
+    - .env

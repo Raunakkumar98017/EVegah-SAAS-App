@@ -1,37 +1,80 @@
+import 'package:flutter/foundation.dart';
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:http/http.dart' as http;
 
 class AuthService {
-  static String get baseUrl => 'mock_url';
+  static const String baseUrl = "https://admin.evegah.com/api/";
 
   // GENERATED OTP
-  String generatedOtp = "1234";
+  String generatedOtp = "";
 
   // ACCESS TOKEN
-  String accessToken = "mock_access_token_123456789";
+  String accessToken = "";
 
   // CHECK MOBILE NUMBER
   Future<bool> checkMobileNumber(String mobileNumber) async {
-    // Fake a 500ms network latency
-    await Future.delayed(const Duration(milliseconds: 500));
-    accessToken = "mock_access_token_${mobileNumber}_${DateTime.now().millisecondsSinceEpoch}";
-    return true;
+    final url = Uri.parse("${baseUrl}CheckCustomerMobileNumber");
+
+    debugPrint("🚀 CALLING CHECK MOBILE API...");
+
+    final response = await http.post(
+      url,
+      headers: {"Content-Type": "application/json"},
+      body: jsonEncode({"mobileNumber": mobileNumber}),
+    );
+
+    debugPrint("🚀 CHECK MOBILE STATUS: ${response.statusCode}");
+    debugPrint("🚀 CHECK MOBILE RESPONSE: ${response.body}"); // <-- This will show us the truth!
+
+    if (response.statusCode == 200) {
+      final decodedResponse = jsonDecode(response.body);
+
+      String token = "";
+
+      // We check if "data" exists, and if it's a List, we grab the first item [0]
+      if (decodedResponse["data"] != null && decodedResponse["data"] is List && decodedResponse["data"].isNotEmpty) {
+         token = decodedResponse["data"][0]["access_token"] ?? "";
+      } 
+      // Fallback just in case the server changes format later
+      else if (decodedResponse["access_token"] != null) {
+         token = decodedResponse["access_token"];
+      }
+
+      accessToken = token;
+      debugPrint("🚀 EXTRACTED TOKEN: '$accessToken'");
+
+      return true;
+    }
+
+    return false;
   }
 
   // GENERATE OTP
   String generateOtp() {
-    generatedOtp = "1234";
+    final random = Random();
+
+    generatedOtp = (1000 + random.nextInt(9000)).toString();
+
     return generatedOtp;
   }
 
   // SEND OTP USING 2FACTOR
   Future<bool> sendOtp(String mobileNumber) async {
-    // Fake latency
-    await Future.delayed(const Duration(milliseconds: 500));
     generateOtp();
-    return true;
+
+    final url = Uri.parse(
+      "https://2factor.in/API/V1/7d84d134-26fe-11ed-9c12-0200cd936042/SMS/$mobileNumber/$generatedOtp/eVegah+SMS",
+    );
+
+    final response = await http.get(url);
+
+    return response.statusCode == 200;
   }
 
   // VERIFY OTP
   bool verifyOtp(String otp) {
-    return otp == "1234" || otp == generatedOtp;
+    return otp == generatedOtp;
   }
 }

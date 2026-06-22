@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import '../../../dashboard/presentation/screens/main_navigation.dart';
 import '../../../../core/constants/app_constants.dart';
+import '../../../../core/services/session_service.dart';
+import 'login_screen.dart';
 
 class AuthWrapper extends StatefulWidget {
   const AuthWrapper({super.key});
@@ -60,11 +62,15 @@ class _AuthWrapperState extends State<AuthWrapper> with TickerProviderStateMixin
   Future<void> _checkLoginStatus() async {
     if (!mounted) return;
 
-    // Route user to Main Navigation directly
+    final isLoggedIn = await SessionService().isLoggedIn();
+    if (!mounted) return;
+
+    // Route user to appropriate screen
     Navigator.pushReplacement(
       context,
       PageRouteBuilder(
-        pageBuilder: (context, animation, secondaryAnimation) => const MainNavigation(),
+        pageBuilder: (context, animation, secondaryAnimation) => 
+            isLoggedIn ? const MainNavigation() : const LoginScreen(),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
           return FadeTransition(opacity: animation, child: child);
         },

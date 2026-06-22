@@ -72,35 +72,29 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
     });
 
     try {
-      bool exists = await authService.checkMobileNumber(phoneController.text.trim());
-      if (exists) {
-        bool otpSent = await authService.sendOtp(phoneController.text.trim());
-        if (otpSent && mounted) {
-          Navigator.push(
-            context,
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) => OtpScreen(authService: authService),
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                return SlideTransition(
-                  position: Tween<Offset>(
-                    begin: const Offset(1, 0),
-                    end: Offset.zero,
-                  ).animate(animation),
-                  child: child,
-                );
-              },
+      bool isExistingUser = await authService.checkMobileNumber(phoneController.text.trim());
+      bool otpSent = await authService.sendOtp(phoneController.text.trim());
+      
+      if (otpSent && mounted) {
+        Navigator.push(
+          context,
+          PageRouteBuilder(
+            pageBuilder: (context, animation, secondaryAnimation) => OtpScreen(
+              authService: authService,
+              phoneNumber: phoneController.text.trim(),
+              isExistingUser: isExistingUser,
             ),
-          );
-        }
-      } else {
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text("Mobile number not registered. Please Sign Up!"),
-              backgroundColor: Colors.orange,
-            ),
-          );
-        }
+            transitionsBuilder: (context, animation, secondaryAnimation, child) {
+              return SlideTransition(
+                position: Tween<Offset>(
+                  begin: const Offset(1, 0),
+                  end: Offset.zero,
+                ).animate(animation),
+                child: child,
+              );
+            },
+          ),
+        );
       }
     } catch (e) {
       if (mounted) {
@@ -356,32 +350,7 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                           ),
                           const SizedBox(height: 24),
 
-                          // Sign Up Link
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Text(
-                                "Don't have an account? ",
-                                style: TextStyle(color: Colors.grey, fontSize: 14),
-                              ),
-                              GestureDetector(
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(builder: (_) => const CreateProfileScreen()),
-                                  );
-                                },
-                                child: const Text(
-                                  "Sign Up",
-                                  style: TextStyle(
-                                    color: Color(0xFF4313B8),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
+                          // The "Sign Up" button was removed to strictly enforce OTP flow
                         ],
                       ),
                     ),
