@@ -295,7 +295,7 @@ class _OfferScreenState extends State<OfferScreen> {
                 child: Column(
                   children: [
                     // --- 4. HERO PROMO BANNER ---
-                    Padding(
+                 Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 20),
                       child: Container(
                         padding: const EdgeInsets.all(18),
@@ -348,11 +348,20 @@ class _OfferScreenState extends State<OfferScreen> {
                               ),
                             ),
                             const SizedBox(width: 12),
+                            // 🚨 REPLACED IMAGE ASSET WITH A STYLED ICON
                             Expanded(
-                              flex: 3,
-                              child: Image.asset(
-                                "assets/gift_box_refer.png",
-                                fit: BoxFit.contain,
+                              flex: 2,
+                              child: Container(
+                                padding: const EdgeInsets.all(12),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFF4313B8).withOpacity(0.1),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: const Icon(
+                                  Icons.discount_rounded, // You can change this to Icons.local_offer_rounded, etc.
+                                  color: Color(0xFF4313B8),
+                                  size: 32,
+                                ),
                               ),
                             ),
                           ],

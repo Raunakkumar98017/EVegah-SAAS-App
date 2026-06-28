@@ -547,11 +547,19 @@ class _WalletScreenState extends State<WalletScreen> {
                   ),
                   child: Row(
                     children: [
-                      Image.asset(
-                        "assets/gift_box_refer.png",
+                      // 🚨 REPLACED IMAGE WITH A STYLED ICON
+                      Container(
                         width: 50,
                         height: 50,
-                        fit: BoxFit.contain,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF4313B8).withOpacity(0.1),
+                          shape: BoxShape.circle,
+                        ),
+                        child: const Icon(
+                          Icons.card_giftcard_rounded, 
+                          color: Color(0xFF4313B8), 
+                          size: 26
+                        ),
                       ),
                       const SizedBox(width: 12),
                       Expanded(

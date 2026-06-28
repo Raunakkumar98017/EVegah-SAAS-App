@@ -18,7 +18,7 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _carouselIndex = 0;
-  bool hasActiveRide = false; // Set to true to view the live active ride card mockup!
+  bool hasActiveRide = false; 
 
   final List<Map<String, dynamic>> _carouselSlides = [
     {
@@ -60,7 +60,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     {
       "name": "City",
       "price": "₹39/hr",
-      "image": "assets/black_scooter_city.png", // Make sure you have this asset or change it
+      "image": "assets/black_scooter_city.png", 
       "badge": "Most Popular",
       "badgeBg": 0xFFECFDF5,
       "badgeText": 0xFF059669,
@@ -69,7 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     {
       "name": "Fly",
       "price": "₹49/hr",
-      "image": "assets/kick_scooter_fly.png", // Make sure you have this asset or change it
+      "image": "assets/kick_scooter_fly.png", 
       "badge": "Best for Long Rides",
       "badgeBg": 0xFFEFF6FF,
       "badgeText": 0xFF2563EB,
@@ -92,11 +92,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    // Location selector
                     GestureDetector(
-                      onTap: () {
-                        // Location selection dialog
-                      },
+                      onTap: () {},
                       child: Row(
                         children: const [
                           Icon(Icons.location_on_rounded, color: Color(0xFF4313B8), size: 18),
@@ -115,7 +112,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     
-                    // 🚨 WIRED UP: Notification bell icon with red dot badge
                     GestureDetector(
                       onTap: () {
                         Navigator.push(
@@ -196,7 +192,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             border: Border.all(color: const Color(0xFFE2E8F0)),
                             boxShadow: [
                               BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.01),
+                                color: Colors.black.withOpacity(0.01),
                                 blurRadius: 8,
                                 offset: const Offset(0, 4),
                               ),
@@ -340,6 +336,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                     ),
                     const SizedBox(width: 12),
+                    
                     // Wallet Balance card
                     Expanded(
                       child: Container(
@@ -350,7 +347,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.01),
+                              color: Colors.black.withOpacity(0.01),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             ),
@@ -367,7 +364,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                     Container(
                                       padding: const EdgeInsets.all(4),
                                       decoration: BoxDecoration(
-                                        color: const Color(0xFF4313B8).withValues(alpha: 0.1),
+                                        color: const Color(0xFF4313B8).withOpacity(0.1),
                                         shape: BoxShape.circle,
                                       ),
                                       child: const Icon(Icons.account_balance_wallet_rounded, color: Color(0xFF4313B8), size: 12),
@@ -388,48 +385,56 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                             ),
                             const SizedBox(height: 10),
+                            
+                            // 🚨 THE FIX: Wrapped the buttons in a FittedBox to stop the Right Overflow!
                             Row(
                               children: [
                                 Expanded(
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 6),
+                                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
                                     decoration: BoxDecoration(
                                       color: const Color(0xFFF5F3FF),
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(color: const Color(0xFFDDD6FE)),
                                     ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.add, color: Color(0xFF4313B8), size: 10),
-                                        SizedBox(width: 2),
-                                        Text(
-                                          "Add Money",
-                                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF4313B8)),
-                                        ),
-                                      ],
+                                    child: const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.add, color: Color(0xFF4313B8), size: 10),
+                                          SizedBox(width: 2),
+                                          Text(
+                                            "Add Money",
+                                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Color(0xFF4313B8)),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
                                 const SizedBox(width: 6),
                                 Expanded(
                                   child: Container(
-                                    padding: const EdgeInsets.symmetric(vertical: 6),
+                                    padding: const EdgeInsets.symmetric(vertical: 6, horizontal: 2),
                                     decoration: BoxDecoration(
                                       color: Colors.white,
                                       borderRadius: BorderRadius.circular(10),
                                       border: Border.all(color: const Color(0xFFE2E8F0)),
                                     ),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.list_alt_rounded, color: Colors.grey, size: 10),
-                                        SizedBox(width: 2),
-                                        Text(
-                                          "Transactions",
-                                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black87),
-                                        ),
-                                      ],
+                                    child: const FittedBox(
+                                      fit: BoxFit.scaleDown,
+                                      child: Row(
+                                        mainAxisAlignment: MainAxisAlignment.center,
+                                        children: [
+                                          Icon(Icons.list_alt_rounded, color: Colors.grey, size: 10),
+                                          SizedBox(width: 2),
+                                          Text(
+                                            "Transactions",
+                                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.black87),
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   ),
                                 ),
@@ -439,22 +444,17 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const Divider(color: Color(0xFFF1F5F9), height: 1),
                             const SizedBox(height: 8),
                             Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
                               children: [
-                                Expanded(
-                                  child: Row(
-                                    children: const [
-                                      Icon(Icons.stars_rounded, color: Colors.amber, size: 14),
-                                      SizedBox(width: 4),
-                                      Flexible(
-                                        child: Text(
-                                          "Evegah Coins",
-                                          maxLines: 1,
-                                          overflow: TextOverflow.ellipsis,
-                                          style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
-                                        ),
-                                      ),
-                                    ],
-                                  ),
+                                Row(
+                                  children: const [
+                                    Icon(Icons.stars_rounded, color: Colors.amber, size: 14),
+                                    SizedBox(width: 4),
+                                    Text(
+                                      "Evegah Coins",
+                                      style: TextStyle(fontSize: 9, fontWeight: FontWeight.bold, color: Colors.grey),
+                                    ),
+                                  ],
                                 ),
                                 Row(
                                   children: const [
@@ -622,7 +622,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           border: Border.all(color: const Color(0xFFE2E8F0)),
                           boxShadow: [
                             BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.01),
+                              color: Colors.black.withOpacity(0.01),
                               blurRadius: 8,
                               offset: const Offset(0, 4),
                             )
@@ -738,9 +738,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                   ],
                                 ),
                                 GestureDetector(
-                                  onTap: () {
-                                    // Refer now action
-                                  },
+                                  onTap: () {},
                                   child: Container(
                                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                                     decoration: BoxDecoration(
@@ -759,16 +757,20 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ],
                             ),
+                            // 🚨 REPLACED IMAGE WITH A STYLISH BUILT-IN ICON
                             Positioned(
-                              right: -8,
-                              bottom: -8,
+                              right: -10,
+                              bottom: -10,
                               child: Opacity(
-                                opacity: 0.9,
-                                child: Image.asset(
-                                  "assets/gift_box_refer.png", // Make sure this image exists
-                                  width: 55,
-                                  height: 55,
-                                  fit: BoxFit.contain,
+                                opacity: 0.15, // Matches the opacity of the other card perfectly
+                                child: Container(
+                                  width: 60,
+                                  height: 60,
+                                  decoration: const BoxDecoration(
+                                    color: Color(0xFF047857), // Matches the dark green text
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(Icons.card_giftcard_rounded, color: Colors.white, size: 32),
                                 ),
                               ),
                             ),
@@ -869,7 +871,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
               // --- 8. MORE GRID SECTION ---
               const Padding(
-                padding: EdgeInsets.symmetric(horizontal: 20),
+                padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   "More",
                   style: TextStyle(
@@ -931,7 +933,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           Container(
             padding: const EdgeInsets.all(6),
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
+              color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(icon, color: color, size: 16),
@@ -1141,7 +1143,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
         ),
         boxShadow: [
           BoxShadow(
-            color: const Color(0xFF1E1452).withValues(alpha: 0.3),
+            color: const Color(0xFF1E1452).withOpacity(0.3),
             blurRadius: 20,
             offset: const Offset(0, 6),
           ),
@@ -1194,7 +1196,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 // Navigate to active ride
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.white.withValues(alpha: 0.15),
+                backgroundColor: Colors.white.withOpacity(0.15),
                 elevation: 0,
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),

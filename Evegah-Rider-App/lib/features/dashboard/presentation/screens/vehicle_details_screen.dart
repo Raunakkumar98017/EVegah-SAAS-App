@@ -104,10 +104,17 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
     if (mounted) {
       setState(() {
         _vehicleData = data;
-        _errorMessage = null; // Prevent showing error screen
+        _errorMessage = null; 
         _isLoading = false;
       });
     }
+  }
+
+  void _openDatePicker() {
+    // TODO: Add date picker logic here
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Date Picker Coming Soon!")),
+    );
   }
 
   @override
@@ -180,26 +187,31 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                 children: [
                   // --- 100% INSURED BAR ---
                   Container(
+                    width: double.infinity,
                     padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 16),
                     decoration: BoxDecoration(
                       color: const Color(0xFFF5F3FF),
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: const [
-                        Icon(Icons.verified_user, color: Color(0xFF4313B8), size: 16),
-                        SizedBox(width: 6),
-                        Text("100% Insured", style: TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold, fontSize: 11)),
-                        SizedBox(width: 8),
-                        Text("•", style: TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold)),
-                        SizedBox(width: 8),
-                        Text("Hassle-free", style: TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold, fontSize: 11)),
-                        SizedBox(width: 8),
-                        Text("•", style: TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold)),
-                        SizedBox(width: 8),
-                        Text("24x7 Roadside Assistance", style: TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold, fontSize: 11)),
-                      ],
+                    // 🚨 FIX 1: FITTEDBOX PREVENTS THE HORIZONTAL OVERFLOW ON SMALL PHONES
+                    child: FittedBox(
+                      fit: BoxFit.scaleDown,
+                      child: Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: const [
+                          Icon(Icons.verified_user, color: Color(0xFF4313B8), size: 16),
+                          SizedBox(width: 6),
+                          Text("100% Insured", style: TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold, fontSize: 11)),
+                          SizedBox(width: 8),
+                          Text("•", style: TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold)),
+                          SizedBox(width: 8),
+                          Text("Hassle-free", style: TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold, fontSize: 11)),
+                          SizedBox(width: 8),
+                          Text("•", style: TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold)),
+                          SizedBox(width: 8),
+                          Text("24x7 Roadside Assistance", style: TextStyle(color: Color(0xFF4313B8), fontWeight: FontWeight.bold, fontSize: 11)),
+                        ],
+                      ),
                     ),
                   ),
                   const SizedBox(height: 20),
@@ -223,7 +235,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                                 width: 140,
                                 height: 140,
                                 decoration: BoxDecoration(
-                                  color: const Color(0xFF4313B8).withValues(alpha: 0.05),
+                                  color: const Color(0xFF4313B8).withOpacity(0.05),
                                   shape: BoxShape.circle,
                                 ),
                               ),
@@ -319,7 +331,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                                     children: const [
                                       Text("Daily Drive", style: TextStyle(color: Color(0xFF1E293B), fontSize: 13, fontWeight: FontWeight.bold)),
                                       SizedBox(height: 2),
-                                      Text("4+ Hours (Ideal)", style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w500)),
+                                      Text("4+ Hours", style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w500)),
                                     ],
                                   ),
                                 ),
@@ -352,7 +364,7 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
                                     children: const [
                                       Text("Subscription", style: TextStyle(color: Color(0xFF1E293B), fontSize: 13, fontWeight: FontWeight.bold)),
                                       SizedBox(height: 2),
-                                      Text("7+ Days bookings", style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w500)),
+                                      Text("7+ Days", style: TextStyle(color: Colors.grey, fontSize: 10, fontWeight: FontWeight.w500)),
                                     ],
                                   ),
                                 ),
@@ -439,91 +451,97 @@ class _VehicleDetailsScreenState extends State<VehicleDetailsScreen> {
             ),
           ),
 
-          // --- BOTTOM PAYABLE CARD & CONTINUE BOOKING BUTTON ---
+          // --- BOTTOM PAYABLE CARD & CONTINUE BOOKING ---
           Container(
-            padding: const EdgeInsets.all(20),
-            decoration: const BoxDecoration(
+            padding: EdgeInsets.fromLTRB(20, 16, 20, MediaQuery.of(context).padding.bottom + 16),
+            decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-              boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 10, offset: Offset(0, -2))],
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 20,
+                  offset: const Offset(0, -5),
+                ),
+              ],
+              borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
             ),
             child: Row(
               children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      const Text("Total Payable", style: TextStyle(color: Colors.grey, fontSize: 11, fontWeight: FontWeight.w600)),
-                      const SizedBox(height: 4),
-                      Row(
-                        children: [
-                          Text("₹${todaysRate.toStringAsFixed(0)}", style: const TextStyle(color: Color(0xFF1E293B), fontSize: 22, fontWeight: FontWeight.bold)),
-                          const SizedBox(width: 6),
-                          const Icon(Icons.info_outline, color: Colors.grey, size: 14),
-                        ],
-                      ),
-                      const SizedBox(height: 2),
-                      const Text("Incl. of all taxes", style: TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.w600)),
-                    ],
-                  ),
+                // Price Column
+                Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text("Total Payable", style: TextStyle(color: Colors.grey, fontSize: 12, fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 2),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.end,
+                      children: [
+                        Text("₹${todaysRate.toInt()}", style: const TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF1E293B))),
+                        const SizedBox(width: 4),
+                        const Padding(
+                          padding: EdgeInsets.only(bottom: 4),
+                          child: Icon(Icons.info_outline, color: Colors.grey, size: 14),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: 2),
+                    const Text("Incl. of all taxes", style: TextStyle(color: Colors.grey, fontSize: 10)),
+                  ],
                 ),
-                const SizedBox(width: 16),
+                const SizedBox(width: 24),
+                
+                // 🚨 FIX 2: EXPANDED PREVENTS THE RIGHT-SIDE OVERFLOW!
                 Expanded(
-                  child: SizedBox(
-                    height: 54,
-                    child: ElevatedButton(
-                      onPressed: _openDatePicker,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2B0B78), // Deep purple
-                        foregroundColor: Colors.white,
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                        elevation: 0,
-                      ),
-                      child: Row(
-                        mainAxisAlignment: MainAxisAlignment.center,
-                        children: const [
-                          Text("Continue Booking", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold)),
-                          SizedBox(width: 6),
-                          Icon(Icons.arrow_forward, size: 16),
-                        ],
-                      ),
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const SelectDateTimeScreen()),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF4313B8),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                      elevation: 0,
+                    ),
+                    child: const Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Text("Continue Booking", style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold)),
+                        SizedBox(width: 8),
+                        Icon(Icons.arrow_forward, color: Colors.white, size: 18),
+                      ],
                     ),
                   ),
                 ),
               ],
             ),
-          )
+          ),
         ],
       ),
     );
   }
 
+  // --- HELPER METHOD FOR SPECS GRID ---
   Widget _buildSpecItem(IconData icon, String value, String label) {
     return Column(
       children: [
         Container(
-          height: 44,
-          width: 44,
+          padding: const EdgeInsets.all(12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(12),
+            shape: BoxShape.circle,
             border: Border.all(color: const Color(0xFFE2E8F0)),
           ),
-          child: Icon(icon, color: const Color(0xFF4313B8), size: 18),
+          child: Icon(icon, color: const Color(0xFF4313B8), size: 20),
         ),
-        const SizedBox(height: 6),
-        Text(value, style: const TextStyle(color: Color(0xFF1E293B), fontSize: 11, fontWeight: FontWeight.bold)),
+        const SizedBox(height: 8),
+        Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Color(0xFF1E293B))),
         const SizedBox(height: 2),
-        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 9, fontWeight: FontWeight.bold)),
+        Text(label, style: const TextStyle(color: Colors.grey, fontSize: 10)),
       ],
-    );
-  }
-
-  void _openDatePicker() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(builder: (context) => const SelectDateTimeScreen()),
     );
   }
 }
