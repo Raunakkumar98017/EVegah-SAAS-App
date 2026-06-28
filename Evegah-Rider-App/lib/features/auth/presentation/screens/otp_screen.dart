@@ -306,7 +306,7 @@ class _OtpScreenState extends State<OtpScreen> {
                     onPressed: (isLoading || !isOtpComplete) ? null : verifyOtp,
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF4313B8),
-                      disabledBackgroundColor: const Color(0xFF4313B8).withOpacity(0.4),
+                      disabledBackgroundColor: const Color(0xFF4313B8).withValues(alpha: 0.4),
                       elevation: 0,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),

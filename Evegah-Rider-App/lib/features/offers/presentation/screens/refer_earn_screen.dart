@@ -98,7 +98,7 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                         borderRadius: BorderRadius.circular(24),
                         boxShadow: [
                           BoxShadow(
-                            color: const Color(0xFF31108F).withOpacity(0.25),
+                            color: const Color(0xFF31108F).withValues(alpha: 0.25),
                             blurRadius: 16,
                             offset: const Offset(0, 8),
                           ),
@@ -274,7 +274,7 @@ class _ReferEarnScreenState extends State<ReferEarnScreen> {
                         border: Border.all(color: const Color(0xFFE2E8F0)),
                         boxShadow: [
                           BoxShadow(
-                            color: Colors.black.withOpacity(0.01),
+                            color: Colors.black.withValues(alpha: 0.01),
                             blurRadius: 8,
                             offset: const Offset(0, 4),
                           )

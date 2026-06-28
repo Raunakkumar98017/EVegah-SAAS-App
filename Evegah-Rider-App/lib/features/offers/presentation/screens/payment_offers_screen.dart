@@ -15,10 +15,10 @@ class _PaymentOffersScreenState extends State<PaymentOffersScreen> {
   String _depositOption = 'Pay Now'; // 'Pay Now' or 'Pay Later'
   String _paymentMethod = 'Visa'; // 'Visa', 'Mastercard', or 'UPI'
   
-  double _basePrice = 165.50; // Set base price so that with GET100 applied it becomes 65.50
+  final double _basePrice = 165.50; // Set base price so that with GET100 applied it becomes 65.50
   double _discount = 0.0;
-  double _platformFee = 5.0;
-  double _taxes = 2.50;
+  final double _platformFee = 5.0;
+  final double _taxes = 2.50;
 
   double get _totalPayable {
     double total = _basePrice - _discount + _platformFee + _taxes;

@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import '../lib/core/services/session_service.dart';
+import 'package:evegah_rider_app/core/services/session_service.dart';
 
 void main() {
   group('SessionService isLoggedIn tests', () {

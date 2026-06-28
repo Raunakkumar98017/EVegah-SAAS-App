@@ -347,7 +347,7 @@ class RadarRipplePainter extends CustomPainter {
       final radius = maxRadius * progress;
       final opacity = (1.0 - progress) * 0.35;
       final paint = Paint()
-        ..color = const Color(0xFF4313B8).withOpacity(opacity)
+        ..color = const Color(0xFF4313B8).withValues(alpha: opacity)
         ..style = PaintingStyle.stroke
         ..strokeWidth = 1.5;
 

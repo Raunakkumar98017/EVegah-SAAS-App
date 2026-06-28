@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'otp_screen.dart';
-import 'create_profile_screen.dart';
 import '../../../../core/services/auth_service.dart';
 import '../../../../core/constants/app_constants.dart';
 
@@ -286,9 +285,9 @@ class _LoginScreenState extends State<LoginScreen> with SingleTickerProviderStat
                               onPressed: (isLoading || !isPhoneValid) ? null : sendOtp,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: const Color(0xFF4313B8),
-                                disabledBackgroundColor: const Color(0xFF4313B8).withOpacity(0.4),
+                                disabledBackgroundColor: const Color(0xFF4313B8).withValues(alpha: 0.4),
                                 elevation: 0,
-                                shadowColor: const Color(0xFF4313B8).withOpacity(0.3),
+                                shadowColor: const Color(0xFF4313B8).withValues(alpha: 0.3),
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(16),
                                 ),

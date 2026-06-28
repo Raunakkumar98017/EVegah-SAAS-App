@@ -131,7 +131,7 @@ class _MainNavigationState extends State<MainNavigation> {
                   shape: BoxShape.circle,
                   boxShadow: [
                     BoxShadow(
-                      color: const Color(0xFFD2FC00).withOpacity(0.3),
+                      color: const Color(0xFFD2FC00).withValues(alpha: 0.3),
                       blurRadius: 8,
                       offset: const Offset(0, 4),
                     ),
@@ -171,7 +171,7 @@ class _MainNavigationState extends State<MainNavigation> {
           borderRadius: const BorderRadius.vertical(top: Radius.circular(20)),
           boxShadow: [
             BoxShadow(
-              color: Colors.black.withOpacity(0.04),
+              color: Colors.black.withValues(alpha: 0.04),
               blurRadius: 10,
               offset: const Offset(0, -4),
             ),

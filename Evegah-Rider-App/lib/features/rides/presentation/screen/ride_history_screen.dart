@@ -420,7 +420,7 @@ class _RideHistoryScreenState extends State<RideHistoryScreen> with SingleTicker
               ),
             ],
           ),
-          if (extraWidget != null) extraWidget,
+          ?extraWidget,
           const SizedBox(height: 16),
           const Divider(color: Color(0xFFF1F5F9), height: 1),
           const SizedBox(height: 14),

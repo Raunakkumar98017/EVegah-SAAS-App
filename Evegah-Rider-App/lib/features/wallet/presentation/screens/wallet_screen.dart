@@ -23,7 +23,7 @@ class _WalletScreenState extends State<WalletScreen> {
   // UI State Variables for Real Data
   bool isLoadingData = true;
   double _walletBalance = 2450.00; // Mock balance matching mockup 2
-  double _bonusBalance = 150.00;  // Mock bonus matching mockup 2
+  final double _bonusBalance = 150.00;  // Mock bonus matching mockup 2
 
   final List<Map<String, dynamic>> _mockTransactions = [
     {
@@ -355,7 +355,7 @@ class _WalletScreenState extends State<WalletScreen> {
                     borderRadius: BorderRadius.circular(24),
                     boxShadow: [
                       BoxShadow(
-                        color: const Color(0xFF31108F).withOpacity(0.3),
+                        color: const Color(0xFF31108F).withValues(alpha: 0.3),
                         blurRadius: 16,
                         offset: const Offset(0, 8),
                       ),
@@ -393,7 +393,7 @@ class _WalletScreenState extends State<WalletScreen> {
                           Container(
                             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(0.12),
+                              color: Colors.white.withValues(alpha: 0.12),
                               borderRadius: BorderRadius.circular(20),
                             ),
                             child: Row(
@@ -437,7 +437,7 @@ class _WalletScreenState extends State<WalletScreen> {
                                 child: OutlinedButton(
                                   onPressed: _showWithdrawDialog,
                                   style: OutlinedButton.styleFrom(
-                                    backgroundColor: Colors.white.withOpacity(0.12),
+                                    backgroundColor: Colors.white.withValues(alpha: 0.12),
                                     side: BorderSide.none,
                                     foregroundColor: Colors.white,
                                     minimumSize: const Size(0, 44),
@@ -472,7 +472,7 @@ class _WalletScreenState extends State<WalletScreen> {
 
               // --- 4. QUICK ACTIONS SECTION ---
               const Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                padding: EdgeInsets.symmetric(horizontal: 20),
                 child: Text(
                   "Quick Actions",
                   style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.black),
@@ -648,7 +648,7 @@ class _WalletScreenState extends State<WalletScreen> {
                 borderRadius: BorderRadius.circular(12),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.3),
+                    color: Colors.black.withValues(alpha: 0.3),
                     blurRadius: 6,
                     offset: const Offset(0, 3),
                   ),

@@ -204,7 +204,7 @@ class _OfferScreenState extends State<OfferScreen> {
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: _showAvailableOffers ? [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
+                                color: Colors.black.withValues(alpha: 0.04),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               )
@@ -248,7 +248,7 @@ class _OfferScreenState extends State<OfferScreen> {
                             borderRadius: BorderRadius.circular(10),
                             boxShadow: !_showAvailableOffers ? [
                               BoxShadow(
-                                color: Colors.black.withOpacity(0.04),
+                                color: Colors.black.withValues(alpha: 0.04),
                                 blurRadius: 4,
                                 offset: const Offset(0, 2),
                               )
@@ -520,7 +520,7 @@ class _OfferScreenState extends State<OfferScreen> {
         border: Border.all(color: const Color(0xFFE2E8F0)),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.01),
+            color: Colors.black.withValues(alpha: 0.01),
             blurRadius: 8,
             offset: const Offset(0, 4),
           )
